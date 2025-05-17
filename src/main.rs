@@ -1,8 +1,11 @@
+use crate::commands::PingCommand;
+use crate::commands::{Command, EchoCommand};
 use crate::thread_pool::ThreadPool;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::net::{TcpListener, TcpStream};
 
 mod thread_pool;
+mod commands;
 
 fn main() {
     println!("Logs from your program will appear here!");
@@ -34,6 +37,29 @@ fn handle_client(mut stream: TcpStream) {
             break;
         }
 
-        stream.write_all(b"+PONG\r\n").unwrap();
+        let request = std::str::from_utf8(&buffer[..bytes_read]).unwrap().trim();
+        let index = request.find(' ');
+        let command = &request[..index.unwrap_or(bytes_read)];
+
+        let args = if index.is_some() {
+            request[index.unwrap() + 1..].trim().split_whitespace().collect::<Vec<&str>>()
+        } else {
+            Vec::new()
+        };
+
+        match command {
+            "PING" => {
+                let mut command = PingCommand::new(&mut stream);
+                command.execute();
+            }
+            "ECHO" => {
+                let arg = args.get(0).unwrap_or(&"");
+                let mut command = EchoCommand::new(&mut stream, arg);
+                command.execute();
+            }
+            _ => {
+                println!("unknown command");
+            }
+        }
     }
 }
