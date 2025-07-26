@@ -6,6 +6,7 @@ use std::net::{TcpListener, TcpStream};
 
 mod thread_pool;
 mod commands;
+mod resp;
 
 fn main() {
     println!("Logs from your program will appear here!");
