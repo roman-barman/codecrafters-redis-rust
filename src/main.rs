@@ -39,6 +39,7 @@ fn handle_client(mut stream: TcpStream) {
         }
 
         let request = std::str::from_utf8(&buffer[..bytes_read]).unwrap().trim();
+        println!("request: {}", request);
         let index = request.find(' ');
         let command = &request[..index.unwrap_or(bytes_read)];
 
