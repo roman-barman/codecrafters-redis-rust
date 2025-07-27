@@ -1,7 +1,7 @@
 use crate::commands::PingCommand;
 use crate::commands::{Command, EchoCommand};
 use crate::thread_pool::ThreadPool;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
 mod thread_pool;
@@ -50,13 +50,33 @@ fn handle_client(mut stream: TcpStream) {
 
         match command {
             "PING" => {
-                let mut command = PingCommand::new(&mut stream);
-                command.execute();
+                let mut command = PingCommand();
+                let result = command.execute();
+
+                match result {
+                    Ok(reps) => {
+                        let result: String = reps.into();
+                        stream.write_all(result.as_bytes()).unwrap();
+                    }
+                    Err(e) => {
+                        println!("error: {}", e);
+                    }
+                }
             }
             "ECHO" => {
-                let arg = args.get(0).unwrap_or(&"");
-                let mut command = EchoCommand::new(&mut stream, arg);
-                command.execute();
+                let arg = args.get(0).unwrap_or(&"").to_string();
+                let mut command = EchoCommand::new(arg);
+                let result = command.execute();
+
+                match result {
+                    Ok(reps) => {
+                        let result: String = reps.into();
+                        stream.write_all(result.as_bytes()).unwrap();
+                    }
+                    Err(e) => {
+                        println!("error: {}", e);
+                    }
+                }
             }
             _ => {
                 println!("unknown command");

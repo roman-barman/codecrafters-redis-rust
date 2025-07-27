@@ -1,20 +1,18 @@
 use crate::commands::Command;
-use std::io::Write;
-use std::net::TcpStream;
+use crate::resp::RespType;
 
-pub struct EchoCommand<'a, 'b> {
-    stream: &'a mut TcpStream,
-    arg: &'b str,
+pub struct EchoCommand {
+    arg: String,
 }
 
-impl<'a, 'b> EchoCommand<'a, 'b> {
-    pub fn new(stream: &'a mut TcpStream, arg: &'b str) -> Self {
-        Self { stream, arg }
+impl EchoCommand {
+    pub fn new(arg: String) -> Self {
+        Self { arg }
     }
 }
 
-impl Command for EchoCommand<'_, '_> {
-    fn execute(&mut self) {
-        self.stream.write_all(self.arg.as_bytes()).unwrap();
+impl Command for EchoCommand {
+    fn execute(&mut self) -> Result<RespType, String> {
+        Ok(RespType::BulkString(self.arg.clone()))
     }
 }

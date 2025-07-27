@@ -1,19 +1,10 @@
 use crate::commands::command::Command;
-use std::io::Write;
-use std::net::TcpStream;
+use crate::resp::RespType;
 
-pub struct PingCommand<'a> {
-    stream: &'a mut TcpStream,
-}
+pub struct PingCommand();
 
-impl<'a> PingCommand<'a> {
-    pub fn new(stream: &'a mut TcpStream) -> Self {
-        Self { stream }
-    }
-}
-
-impl Command for PingCommand<'_> {
-    fn execute(&mut self) {
-        self.stream.write_all(b"+PONG\r\n").unwrap();
+impl Command for PingCommand {
+    fn execute(&mut self) -> Result<RespType, String> {
+        Ok(RespType::SimpleString("PONG".to_string()))
     }
 }
