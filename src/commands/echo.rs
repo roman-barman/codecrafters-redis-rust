@@ -1,5 +1,4 @@
-use crate::commands::Command;
-use crate::resp::RespType;
+use crate::commands::command::Command;
 
 pub struct EchoCommand {
     arg: String,
@@ -11,8 +10,8 @@ impl EchoCommand {
     }
 }
 
-impl Command for EchoCommand {
-    fn execute(&mut self) -> Result<RespType, String> {
-        Ok(RespType::BulkString(self.arg.clone()))
+impl Command<String> for EchoCommand {
+    fn execute(&mut self) -> Result<String, String> {
+        Ok(self.arg.clone())
     }
 }

@@ -1,10 +1,9 @@
 use crate::commands::command::Command;
-use crate::resp::RespType;
 
-pub struct PingCommand();
+pub struct PingCommand;
 
-impl Command for PingCommand {
-    fn execute(&mut self) -> Result<RespType, String> {
-        Ok(RespType::SimpleString("PONG".to_string()))
+impl Command<String> for PingCommand {
+    fn execute(&mut self) -> Result<String, String> {
+        Ok("PONG".to_string())
     }
 }

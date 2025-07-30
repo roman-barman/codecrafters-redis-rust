@@ -1,5 +1,3 @@
-use crate::resp::RespType;
-
-pub trait Command {
-    fn execute(&mut self) -> Result<RespType, String>;
+pub(crate) trait Command<T> {
+    fn execute(&mut self) -> Result<T, String>;
 }

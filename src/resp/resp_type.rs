@@ -1,11 +1,30 @@
+use std::collections::VecDeque;
 use std::str::Chars;
 
 #[derive(Debug, PartialEq)]
 pub enum RespType {
     SimpleString(String),
     BulkString(String),
-    Array(Vec<RespType>),
+    Array(VecDeque<RespType>),
     Error(String),
+}
+
+impl RespType {
+    pub fn is_string(&self) -> bool {
+        match self {
+            RespType::SimpleString(_) => true,
+            RespType::BulkString(_) => true,
+            _ => false
+        }
+    }
+
+    pub fn get_string_value(self) -> Option<String> {
+        match self {
+            RespType::SimpleString(s) => Some(s),
+            RespType::BulkString(s) => Some(s),
+            _ => None
+        }
+    }
 }
 
 impl TryFrom<&str> for RespType {
@@ -39,16 +58,16 @@ fn read_resp_type(chars: &mut Chars) -> Result<RespType, String> {
     }
 }
 
-fn read_array(chars: &mut Chars) -> Result<Vec<RespType>, String> {
+fn read_array(chars: &mut Chars) -> Result<VecDeque<RespType>, String> {
     let len: String = chars.by_ref().take_while(|c| c != &'\r').collect::<String>();
 
     chars.next();
 
     let len: u64 = len.parse().map_err(|_| "Invalid array length".to_string())?;
-    let mut result = Vec::with_capacity(len as usize);
+    let mut result = VecDeque::with_capacity(len as usize);
 
     for _ in 0..len {
-        result.push(read_resp_type(chars)?);
+        result.push_back(read_resp_type(chars)?);
     }
 
     Ok(result)
@@ -98,6 +117,7 @@ fn read_error(chars: &mut Chars) -> String {
 #[cfg(test)]
 mod tests {
     use crate::resp::resp_type::RespType;
+    use std::collections::VecDeque;
 
     #[test]
     fn test_try_form_simple_string() {
@@ -122,10 +142,10 @@ mod tests {
     #[test]
     fn test_try_form_array() {
         assert_eq!(RespType::try_from("*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n"),
-                   Ok(RespType::Array(vec![
+                   Ok(RespType::Array(VecDeque::from(vec![
                        RespType::BulkString("hello".to_string()),
                        RespType::BulkString("world".to_string())
-                   ])));
+                   ]))));
     }
 
     #[test]
@@ -148,10 +168,10 @@ mod tests {
 
     #[test]
     fn test_array_to_string() {
-        let result: String = RespType::Array(vec![
+        let result: String = RespType::Array(VecDeque::from(vec![
             RespType::BulkString("hello".to_string()),
             RespType::BulkString("world".to_string())
-        ]).into();
+        ])).into();
         assert_eq!(result, "*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n".to_string());
     }
 }

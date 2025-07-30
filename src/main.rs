@@ -1,5 +1,4 @@
-use crate::commands::PingCommand;
-use crate::commands::{Command, EchoCommand};
+use crate::commands::CommandExecutor;
 use crate::thread_pool::ThreadPool;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -40,47 +39,13 @@ fn handle_client(mut stream: TcpStream) {
 
         let request = std::str::from_utf8(&buffer[..bytes_read]).unwrap().trim();
         println!("request: {}", request);
-        let index = request.find(' ');
-        let command = &request[..index.unwrap_or(bytes_read)];
-
-        let args = if index.is_some() {
-            request[index.unwrap() + 1..].trim().split_whitespace().collect::<Vec<&str>>()
-        } else {
-            Vec::new()
-        };
-
-        match command {
-            "PING" => {
-                let mut command = PingCommand();
-                let result = command.execute();
-
-                match result {
-                    Ok(reps) => {
-                        let result: String = reps.into();
-                        stream.write_all(result.as_bytes()).unwrap();
-                    }
-                    Err(e) => {
-                        println!("error: {}", e);
-                    }
-                }
+        let result = CommandExecutor::execute(request);
+        match result {
+            Ok(response) => {
+                stream.write(response.as_bytes()).unwrap();
             }
-            "ECHO" => {
-                let arg = args.get(0).unwrap_or(&"").to_string();
-                let mut command = EchoCommand::new(arg);
-                let result = command.execute();
-
-                match result {
-                    Ok(reps) => {
-                        let result: String = reps.into();
-                        stream.write_all(result.as_bytes()).unwrap();
-                    }
-                    Err(e) => {
-                        println!("error: {}", e);
-                    }
-                }
-            }
-            _ => {
-                println!("unknown command");
+            Err(e) => {
+                println!("error: {}", e);
             }
         }
     }
