@@ -32,7 +32,12 @@ fn run_command(resp: RespType) -> RespType {
             let command = array.pop_front().unwrap();
 
             if command.is_string() {
-                run_command_with_args(command.get_string_value().unwrap().as_str(), &mut array)
+                let command = command.get_string_value().unwrap();
+                if array.is_empty() {
+                    run_command_without_args(command.as_str())
+                } else {
+                    run_command_with_args(command.as_str(), &mut array)
+                }
             } else {
                 RespType::Error("Invalid command. Expected bulk string or simple string.".to_string())
             }
