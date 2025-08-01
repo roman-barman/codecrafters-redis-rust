@@ -53,7 +53,7 @@ fn read_resp_type(chars: &mut Chars) -> Result<RespType, String> {
             }
         }
         None => {
-            Err("Empty command".to_string())
+            Err("Empty RESP value".to_string())
         }
     }
 }
