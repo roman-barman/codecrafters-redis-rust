@@ -141,10 +141,10 @@ mod tests {
 
     #[test]
     fn test_try_form_array() {
-        assert_eq!(RespType::try_from("*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n"),
+        assert_eq!(RespType::try_from("*2\r\n$4\r\nECHO\r\n$5\r\nmango\r\n"),
                    Ok(RespType::Array(VecDeque::from(vec![
-                       RespType::BulkString("hello".to_string()),
-                       RespType::BulkString("world".to_string())
+                       RespType::BulkString("ECHO".to_string()),
+                       RespType::BulkString("mango".to_string())
                    ]))));
     }
 

@@ -30,6 +30,7 @@ fn run_command(resp: RespType) -> RespType {
         RespType::SimpleString(command) => run_command_without_args(command.as_str()),
         RespType::Array(mut array) => {
             let command: String = array.pop_front().unwrap().into();
+            println!("Command: {}", command);
             run_command_with_args(command.as_str(), &mut array)
         }
         _ => RespType::Error(
