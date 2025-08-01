@@ -29,9 +29,13 @@ fn run_command(resp: RespType) -> RespType {
         RespType::BulkString(command) => run_command_without_args(command.as_str()),
         RespType::SimpleString(command) => run_command_without_args(command.as_str()),
         RespType::Array(mut array) => {
-            let command: String = array.pop_front().unwrap().into();
-            println!("Command: {}", command);
-            run_command_with_args(command.as_str(), &mut array)
+            let command = array.pop_front().unwrap();
+
+            if command.is_string() {
+                run_command_with_args(command.get_string_value().unwrap().as_str(), &mut array)
+            } else {
+                RespType::Error("Invalid command. Expected bulk string or simple string.".to_string())
+            }
         }
         _ => RespType::Error(
             "Invalid command. Expected bulk string or simple string.".to_string()
