@@ -1,12 +1,35 @@
 use std::collections::VecDeque;
 use std::str::Chars;
 
-#[derive(Debug, PartialEq)]
+const CR: char = '\r';
+const LF: char = '\n';
+const CRLF: &str = "\r\n";
+const SIMPLE_STRING_PREFIX: char = '+';
+const BULK_STRING_PREFIX: char = '$';
+const ARRAY_PREFIX: char = '*';
+const ERROR_PREFIX: char = '-';
+
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum RespType {
     SimpleString(String),
     BulkString(String),
     Array(VecDeque<RespType>),
     Error(String),
+}
+
+#[derive(Debug, thiserror::Error, PartialEq, Clone)]
+pub enum RespParseError {
+    #[error("Empty RESP value")]
+    EmptyValue,
+    #[error("Unknown RESP type")]
+    UnknownType,
+    #[error("Invalid array length format")]
+    InvalidArrayLengthFormat,
+    #[error("Invalid bulk string length")]
+    InvalidBulkStringLengthFormat,
+    #[error("Unexpected end of input")]
+    UnexpectedEof,
 }
 
 impl RespType {
@@ -28,42 +51,39 @@ impl RespType {
 }
 
 impl TryFrom<&str> for RespType {
-    type Error = String;
-    fn try_from(value: &str) -> Result<Self, String> {
+    type Error = RespParseError;
+    fn try_from(value: &str) -> Result<Self, RespParseError> {
         let mut chars = value.chars();
         read_resp_type(&mut chars)
     }
 }
 
-fn read_resp_type(chars: &mut Chars) -> Result<RespType, String> {
-    let mut first = chars.next();
-
-    while first == Some('\r') || first == Some('\n') {
-        first = chars.next();
-    }
+fn read_resp_type(chars: &mut Chars) -> Result<RespType, RespParseError> {
+    let first = chars.next();
 
     match first {
         Some(c) => {
             match c {
-                '+' => Ok(RespType::SimpleString(read_simple_string(chars))),
-                '$' => read_bulk_string(chars).map(RespType::BulkString),
-                '-' => Ok(RespType::Error(read_error(chars))),
-                '*' => read_array(chars).map(RespType::Array),
-                _ => Err("Unknown RESP type".to_string())
+                SIMPLE_STRING_PREFIX => read_simple_string(chars).map(RespType::SimpleString),
+                BULK_STRING_PREFIX => read_bulk_string(chars).map(RespType::BulkString),
+                ERROR_PREFIX => read_error(chars).map(RespType::Error),
+                ARRAY_PREFIX => read_array(chars).map(RespType::Array),
+                _ => Err(RespParseError::UnknownType)
             }
         }
         None => {
-            Err("Empty RESP value".to_string())
+            Err(RespParseError::EmptyValue)
         }
     }
 }
 
-fn read_array(chars: &mut Chars) -> Result<VecDeque<RespType>, String> {
-    let len: String = chars.by_ref().take_while(|c| c != &'\r').collect::<String>();
+fn read_array(chars: &mut Chars) -> Result<VecDeque<RespType>, RespParseError> {
+    let len: String = chars.by_ref().take_while(|c| c != &CR).collect::<String>();
+    if chars.next() != Some(LF) {
+        return Err(RespParseError::UnexpectedEof);
+    }
 
-    chars.next();
-
-    let len: u64 = len.parse().map_err(|_| "Invalid array length".to_string())?;
+    let len: u64 = len.parse().map_err(|_| RespParseError::InvalidArrayLengthFormat)?;
     let mut result = VecDeque::with_capacity(len as usize);
 
     for _ in 0..len {
@@ -73,33 +93,55 @@ fn read_array(chars: &mut Chars) -> Result<VecDeque<RespType>, String> {
     Ok(result)
 }
 
-fn read_simple_string(chars: &mut Chars) -> String {
-    chars.take_while(|c| c != &'\r').collect::<String>()
+fn read_simple_string(chars: &mut Chars) -> Result<String, RespParseError> {
+    let result = chars.take_while(|c| c != &CR).collect::<String>();
+    if chars.next() != Some(LF) {
+        Err(RespParseError::UnexpectedEof)
+    } else {
+        Ok(result)
+    }
 }
 
-fn read_bulk_string(chars: &mut Chars) -> Result<String, String> {
+fn read_error(chars: &mut Chars) -> Result<String, RespParseError> {
+    let result = chars.take_while(|c| c != &CR).collect::<String>();
+    if chars.next() != Some(LF) {
+        Err(RespParseError::UnexpectedEof)
+    } else {
+        Ok(result)
+    }
+}
+
+fn read_bulk_string(chars: &mut Chars) -> Result<String, RespParseError> {
     let len: String = chars.by_ref().take_while(|c| c != &'\r').collect::<String>();
+    if chars.next() != Some(LF) {
+        return Err(RespParseError::UnexpectedEof);
+    }
 
-    chars.next();
-
-    let len: u64 = len.parse().map_err(|_| "Invalid bulk string length".to_string())?;
+    let len: u64 = len.parse().map_err(|_| RespParseError::InvalidBulkStringLengthFormat)?;
 
     if len < 1 {
         return Ok("".to_string());
     }
 
     let content: String = chars.take(len as usize).collect();
+    if chars.next() != Some(CR) {
+        return Err(RespParseError::UnexpectedEof);
+    }
+    if chars.next() != Some(LF) {
+        return Err(RespParseError::UnexpectedEof);
+    }
+
     Ok(content)
 }
 
 impl From<RespType> for String {
     fn from(resp_type: RespType) -> Self {
         match resp_type {
-            RespType::SimpleString(s) => format!("+{}\r\n", s),
-            RespType::BulkString(s) => format!("${}\r\n{}\r\n", s.len(), s),
-            RespType::Error(s) => format!("-{}\r\n", s),
+            RespType::SimpleString(s) => format!("+{}{}", s, CRLF),
+            RespType::BulkString(s) => format!("${}{}{}{}", s.len(), CRLF, s, CRLF),
+            RespType::Error(s) => format!("-{}{}", s, CRLF),
             RespType::Array(array) => {
-                let mut result = format!("*{}\r\n", array.len());
+                let mut result = format!("*{}{}", array.len(), CRLF);
                 for resp_type in array {
                     let resp_string: String = resp_type.into();
                     result.push_str(resp_string.as_str());
@@ -108,10 +150,6 @@ impl From<RespType> for String {
             }
         }
     }
-}
-
-fn read_error(chars: &mut Chars) -> String {
-    chars.take_while(|c| c != &'\r').collect::<String>()
 }
 
 #[cfg(test)]
