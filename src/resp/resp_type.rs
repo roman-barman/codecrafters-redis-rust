@@ -124,7 +124,11 @@ fn read_bulk_string(chars: &mut Chars) -> Result<String, RespParseError> {
     }
 
     let content: String = chars.take(len as usize).collect();
-    if chars.next() != Some(CR) {
+    let next = chars.next();
+    if next == None {
+        return Ok(content);
+    }
+    if next != Some(CR) {
         return Err(RespParseError::UnexpectedEof);
     }
     if chars.next() != Some(LF) {
