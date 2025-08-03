@@ -14,6 +14,7 @@ const ERROR_PREFIX: char = '-';
 pub enum RespType {
     SimpleString(String),
     BulkString(String),
+    NullBulkString,
     Array(VecDeque<RespType>),
     Error(String),
 }
@@ -65,7 +66,10 @@ fn read_resp_type(chars: &mut Chars) -> Result<RespType, RespParseError> {
         Some(c) => {
             match c {
                 SIMPLE_STRING_PREFIX => read_simple_string(chars).map(RespType::SimpleString),
-                BULK_STRING_PREFIX => read_bulk_string(chars).map(RespType::BulkString),
+                BULK_STRING_PREFIX => read_bulk_string(chars).map(|x| match x {
+                    Some(s) => RespType::BulkString(s),
+                    None => RespType::NullBulkString
+                }),
                 ERROR_PREFIX => read_error(chars).map(RespType::Error),
                 ARRAY_PREFIX => read_array(chars).map(RespType::Array),
                 _ => Err(RespParseError::UnknownType)
@@ -111,22 +115,22 @@ fn read_error(chars: &mut Chars) -> Result<String, RespParseError> {
     }
 }
 
-fn read_bulk_string(chars: &mut Chars) -> Result<String, RespParseError> {
+fn read_bulk_string(chars: &mut Chars) -> Result<Option<String>, RespParseError> {
     let len: String = chars.by_ref().take_while(|c| c != &'\r').collect::<String>();
     if chars.next() != Some(LF) {
         return Err(RespParseError::UnexpectedEof);
     }
 
-    let len: u64 = len.parse().map_err(|_| RespParseError::InvalidBulkStringLengthFormat)?;
+    let len: i64 = len.parse().map_err(|_| RespParseError::InvalidBulkStringLengthFormat)?;
+    let result = match len {
+        ..0 => None,
+        0 => Some("".to_string()),
+        1.. => Some(chars.take(len as usize).collect()),
+    };
 
-    if len < 1 {
-        return Ok("".to_string());
-    }
-
-    let content: String = chars.take(len as usize).collect();
     let next = chars.next();
     if next == None {
-        return Ok(content);
+        return Ok(result);
     }
     if next != Some(CR) {
         return Err(RespParseError::UnexpectedEof);
@@ -135,7 +139,7 @@ fn read_bulk_string(chars: &mut Chars) -> Result<String, RespParseError> {
         return Err(RespParseError::UnexpectedEof);
     }
 
-    Ok(content)
+    Ok(result)
 }
 
 impl From<RespType> for String {
@@ -143,6 +147,7 @@ impl From<RespType> for String {
         match resp_type {
             RespType::SimpleString(s) => format!("+{}{}", s, CRLF),
             RespType::BulkString(s) => format!("${}{}{}{}", s.len(), CRLF, s, CRLF),
+            RespType::NullBulkString => format!("$-1{}", CRLF),
             RespType::Error(s) => format!("-{}{}", s, CRLF),
             RespType::Array(array) => {
                 let mut result = format!("*{}{}", array.len(), CRLF);
@@ -177,6 +182,11 @@ mod tests {
     }
 
     #[test]
+    fn test_try_form_null_bulk_string() {
+        assert_eq!(RespType::try_from("$-1\r\n"), Ok(RespType::NullBulkString));
+    }
+
+    #[test]
     fn test_try_form_error() {
         assert_eq!(RespType::try_from("-Error message\r\n"), Ok(RespType::Error("Error message".to_string())));
     }
@@ -200,6 +210,12 @@ mod tests {
     fn test_bulk_string_to_string() {
         let result: String = RespType::BulkString("hello".to_string()).into();
         assert_eq!(result, "$5\r\nhello\r\n".to_string());
+    }
+
+    #[test]
+    fn test_null_bulk_string_to_string() {
+        let result: String = RespType::NullBulkString.into();
+        assert_eq!(result, "$-1\r\n".to_string());
     }
 
     #[test]

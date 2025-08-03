@@ -1,9 +1,7 @@
-use crate::commands::command::Command;
+pub(crate) struct PingCommand;
 
-pub struct PingCommand;
-
-impl Command<String> for PingCommand {
-    fn execute(&mut self) -> Result<String, String> {
-        Ok("PONG".to_string())
+impl PingCommand {
+    pub(crate) fn execute(&mut self) -> String {
+        "PONG".to_string()
     }
 }
