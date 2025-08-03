@@ -77,21 +77,8 @@ impl CommandExecutor {
                 command.execute(args)
             }
             SET => {
-                if args.len() != 2 {
-                    return RespType::Error(format!("{} requires 2 arguments.", SET));
-                }
-
-                let key = args.pop_front().unwrap();
-                let value = args.pop_front().unwrap();
-
-                if !key.is_string() || !value.is_string() {
-                    return RespType::Error(format!("{} requires string arguments.", SET));
-                }
-
                 let mut command = SetCommand::new(self.storage.clone());
-                RespType::SimpleString(
-                    command.execute(key.get_string_value().unwrap().as_str(),
-                                    value.get_string_value().unwrap().as_str()))
+                command.execute(args)
             }
             GET => {
                 let command = GetCommand::new(self.storage.clone());
