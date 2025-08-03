@@ -94,20 +94,8 @@ impl CommandExecutor {
                                     value.get_string_value().unwrap().as_str()))
             }
             GET => {
-                if args.len() != 1 {
-                    return RespType::Error(format!("{} requires 1 arguments.", GET));
-                }
-
-                let key = args.pop_front().unwrap();
-                if !key.is_string() {
-                    return RespType::Error(format!("{} requires string argument.", GET));
-                }
                 let command = GetCommand::new(self.storage.clone());
-                let result = command.execute(key.get_string_value().unwrap().as_str());
-                match result {
-                    Some(value) => RespType::BulkString(value),
-                    None => RespType::NullBulkString
-                }
+                command.execute(args)
             }
             _ => RespType::Error(format!("Unknown command: {}", command))
         }
