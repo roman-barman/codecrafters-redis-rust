@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 pub(crate) struct EchoCommand;
 
 impl EchoCommand {
-    pub(crate) fn execute(&mut self, args: &mut VecDeque<RespType>) -> RespType {
+    pub(crate) fn execute(&self, args: &mut VecDeque<RespType>) -> RespType {
         let arg = args.pop_front().unwrap_or(RespType::BulkString("".to_string()));
         if arg.is_string() {
             RespType::BulkString(arg.get_string_value().unwrap())

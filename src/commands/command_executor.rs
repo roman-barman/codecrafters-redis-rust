@@ -73,7 +73,7 @@ impl CommandExecutor {
     fn run_command_with_args(&self, command: &str, args: &mut VecDeque<RespType>) -> RespType {
         match command {
             ECHO => {
-                let mut command = EchoCommand;
+                let command = EchoCommand;
                 command.execute(args)
             }
             SET => {
