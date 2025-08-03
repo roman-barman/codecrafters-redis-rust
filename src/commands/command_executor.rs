@@ -63,8 +63,8 @@ impl CommandExecutor {
     fn run_command_without_args(&self, command: &str) -> RespType {
         match command {
             PING => {
-                let mut command = PingCommand;
-                RespType::SimpleString(command.execute())
+                let command = PingCommand;
+                command.execute()
             }
             _ => RespType::Error(format!("Unknown command: {}", command))
         }
