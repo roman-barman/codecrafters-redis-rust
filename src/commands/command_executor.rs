@@ -73,13 +73,8 @@ impl CommandExecutor {
     fn run_command_with_args(&self, command: &str, args: &mut VecDeque<RespType>) -> RespType {
         match command {
             ECHO => {
-                let arg = args.pop_front().unwrap_or(RespType::BulkString("".to_string()));
-                if arg.is_string() {
-                    let mut command = EchoCommand;
-                    RespType::BulkString(command.execute(arg.get_string_value().unwrap().as_str()))
-                } else {
-                    RespType::Error(format!("{} requires a string argument.", ECHO))
-                }
+                let mut command = EchoCommand;
+                command.execute(args)
             }
             SET => {
                 if args.len() != 2 {
