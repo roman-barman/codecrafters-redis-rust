@@ -1,8 +1,9 @@
 use crate::storages::storage::Storage;
+use crate::storages::storage_value::{KeySettings, StorageValue};
 use std::collections::HashMap;
 
 pub struct HashMapStorage {
-    storage: HashMap<String, String>,
+    storage: HashMap<String, StorageValue>,
 }
 
 impl HashMapStorage {
@@ -14,11 +15,22 @@ impl HashMapStorage {
 }
 
 impl Storage for HashMapStorage {
-    fn get(&self, key: &str) -> Option<&str> {
-        self.storage.get(key).map(|v| v.as_str())
+    fn get(&mut self, key: &str) -> Option<&str> {
+        let should_remove = match self.storage.get(key) {
+            None => return None,
+            Some(v) => v.is_value_expired()
+        };
+
+        if should_remove {
+            self.storage.remove(key);
+            None
+        } else {
+            self.storage.get(key).map(|v| v.as_ref())
+        }
     }
 
-    fn set(&mut self, key: &str, value: &str) {
-        self.storage.insert(key.to_string(), value.to_string());
+    fn set(&mut self, key: &str, value: &str, key_settings: KeySettings) {
+        let value = StorageValue::new(value.to_string(), key_settings);
+        self.storage.insert(key.to_string(), value);
     }
 }
