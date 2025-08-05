@@ -21,6 +21,8 @@ impl StorageValue {
         }
 
         let expired_at = self.created_at + TimeDelta::try_milliseconds(self.key_settings.expiry.unwrap() as i64).unwrap();
+        println!("expired_at: {:?}", expired_at);
+        println!("now: {:?}", Local::now());
         expired_at >= Local::now()
     }
 }
