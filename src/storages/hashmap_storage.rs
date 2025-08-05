@@ -21,6 +21,8 @@ impl Storage for HashMapStorage {
             Some(v) => v.is_value_expired()
         };
 
+        println!("should remove: {}", should_remove);
+
         if should_remove {
             self.storage.remove(key);
             None
