@@ -17,6 +17,7 @@ impl StorageValue {
 
     pub(crate) fn is_value_expired(&self) -> bool {
         if self.key_settings.expiry.is_none() {
+            println!("expiry is none");
             return false;
         }
 
