@@ -8,6 +8,7 @@ const SIMPLE_STRING_PREFIX: char = '+';
 const BULK_STRING_PREFIX: char = '$';
 const ARRAY_PREFIX: char = '*';
 const ERROR_PREFIX: char = '-';
+const INTEGER_PREFIX: char = ':';
 
 
 #[derive(Debug, PartialEq, Clone)]
@@ -17,6 +18,7 @@ pub enum RespType {
     NullBulkString,
     Array(VecDeque<RespType>),
     Error(String),
+    Integer(i64),
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Clone)]
@@ -27,8 +29,10 @@ pub enum RespParseError {
     UnknownType,
     #[error("Invalid array length format")]
     InvalidArrayLengthFormat,
-    #[error("Invalid bulk string length")]
+    #[error("Invalid bulk string length format")]
     InvalidBulkStringLengthFormat,
+    #[error("Invalid integer format")]
+    InvalidIntegerFormat,
     #[error("Unexpected end of input")]
     UnexpectedEof,
 }
@@ -72,6 +76,7 @@ fn read_resp_type(chars: &mut Chars) -> Result<RespType, RespParseError> {
                 }),
                 ERROR_PREFIX => read_error(chars).map(RespType::Error),
                 ARRAY_PREFIX => read_array(chars).map(RespType::Array),
+                INTEGER_PREFIX => read_integer(chars).map(RespType::Integer),
                 _ => Err(RespParseError::UnknownType)
             }
         }
@@ -79,6 +84,15 @@ fn read_resp_type(chars: &mut Chars) -> Result<RespType, RespParseError> {
             Err(RespParseError::EmptyValue)
         }
     }
+}
+
+fn read_integer(chars: &mut Chars) -> Result<i64, RespParseError> {
+    let value: String = chars.by_ref().take_while(|c| c != &CR).collect::<String>();
+    if chars.next() != Some(LF) {
+        return Err(RespParseError::UnexpectedEof);
+    }
+
+    value.parse().map_err(|_| RespParseError::InvalidIntegerFormat)
 }
 
 fn read_array(chars: &mut Chars) -> Result<VecDeque<RespType>, RespParseError> {
@@ -145,12 +159,13 @@ fn read_bulk_string(chars: &mut Chars) -> Result<Option<String>, RespParseError>
 impl From<RespType> for String {
     fn from(resp_type: RespType) -> Self {
         match resp_type {
-            RespType::SimpleString(s) => format!("+{}{}", s, CRLF),
-            RespType::BulkString(s) => format!("${}{}{}{}", s.len(), CRLF, s, CRLF),
-            RespType::NullBulkString => format!("$-1{}", CRLF),
-            RespType::Error(s) => format!("-{}{}", s, CRLF),
+            RespType::SimpleString(s) => format!("{}{}{}", SIMPLE_STRING_PREFIX, s, CRLF),
+            RespType::BulkString(s) => format!("{}{}{}{}{}", BULK_STRING_PREFIX, s.len(), CRLF, s, CRLF),
+            RespType::NullBulkString => format!("{}-1{}", BULK_STRING_PREFIX, CRLF),
+            RespType::Error(s) => format!("{}{}{}", ERROR_PREFIX, s, CRLF),
+            RespType::Integer(i) => format!("{}{}{}", INTEGER_PREFIX, i, CRLF),
             RespType::Array(array) => {
-                let mut result = format!("*{}{}", array.len(), CRLF);
+                let mut result = format!("{}{}{}", ARRAY_PREFIX, array.len(), CRLF);
                 for resp_type in array {
                     let resp_string: String = resp_type.into();
                     result.push_str(resp_string.as_str());
@@ -165,6 +180,11 @@ impl From<RespType> for String {
 mod tests {
     use crate::resp::resp_type::RespType;
     use std::collections::VecDeque;
+
+    #[test]
+    fn test_try_form_integer() {
+        assert_eq!(RespType::try_from(":1000\r\n"), Ok(RespType::Integer(1000)));
+    }
 
     #[test]
     fn test_try_form_simple_string() {
@@ -198,6 +218,12 @@ mod tests {
                        RespType::BulkString("ECHO".to_string()),
                        RespType::BulkString("mango".to_string())
                    ]))));
+    }
+
+    #[test]
+    fn test_integer_to_string() {
+        let result: String = RespType::Integer(1000).into();
+        assert_eq!(result, ":1000\r\n".to_string());
     }
 
     #[test]
