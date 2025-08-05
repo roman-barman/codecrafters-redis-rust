@@ -17,13 +17,10 @@ impl StorageValue {
 
     pub(crate) fn is_value_expired(&self) -> bool {
         if self.key_settings.expiry.is_none() {
-            println!("expiry is none");
             return false;
         }
 
         let expired_at = self.created_at + TimeDelta::try_milliseconds(self.key_settings.expiry.unwrap() as i64).unwrap();
-        println!("expired_at: {:?}", expired_at);
-        println!("now: {:?}", Local::now());
         expired_at >= Local::now()
     }
 }

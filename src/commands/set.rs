@@ -44,7 +44,6 @@ impl SetCommand {
                             return RespType::Error("Expiration must be greater than 0.".to_string());
                         }
                         key_settings_builder = key_settings_builder.with_expiry(i as u64);
-                        println!("Setting expiry to {} ms", i);
                     }
                 }
                 _ => {
