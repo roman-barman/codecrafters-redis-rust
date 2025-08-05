@@ -36,9 +36,24 @@ pub struct KeySettings {
     expiry: Option<u64>,
 }
 
-impl KeySettings {
-    pub fn new(expiry: Option<u64>) -> Self {
-        Self { expiry }
+pub struct KeySettingsBuilder {
+    settings: KeySettings,
+}
+
+impl KeySettingsBuilder {
+    pub fn new() -> Self {
+        Self {
+            settings: KeySettings { expiry: None },
+        }
+    }
+
+    pub fn with_expiry(mut self, expiry: u64) -> Self {
+        self.settings.expiry = Some(expiry);
+        self
+    }
+
+    pub fn build(self) -> KeySettings {
+        self.settings
     }
 }
 
