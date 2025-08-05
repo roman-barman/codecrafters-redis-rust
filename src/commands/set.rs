@@ -39,11 +39,21 @@ impl SetCommand {
                         return RespType::Error("No value specified for expiration.".to_string());
                     }
                     let value = args.pop_front().unwrap();
-                    if let RespType::Integer(i) = value {
-                        if i < 1 {
-                            return RespType::Error("Expiration must be greater than 0.".to_string());
+                    if value.is_string() {
+                        let expiry = value.get_string_value().unwrap().parse::<i64>();
+                        match expiry {
+                            Ok(i) => {
+                                if i < 1 {
+                                    return RespType::Error("Expiration must be greater than 0.".to_string());
+                                }
+                                key_settings_builder = key_settings_builder.with_expiry(i as u64);
+                            }
+                            Err(_) => {
+                                return RespType::Error("Invalid expiration value format.".to_string());
+                            }
                         }
-                        key_settings_builder = key_settings_builder.with_expiry(i as u64);
+                    } else {
+                        return RespType::Error("Expiration must be an string.".to_string());
                     }
                 }
                 _ => {
