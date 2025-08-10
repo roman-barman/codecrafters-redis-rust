@@ -35,25 +35,9 @@ impl SetCommand {
             let arg_name = arg_name.get_string_value().unwrap().to_lowercase();
             match arg_name.as_str() {
                 EXPIRY => {
-                    if args.is_empty() {
-                        return RespType::Error("No value specified for expiration.".to_string());
-                    }
-                    let value = args.pop_front().unwrap();
-                    if value.is_string() {
-                        let expiry = value.get_string_value().unwrap().parse::<i64>();
-                        match expiry {
-                            Ok(i) => {
-                                if i < 1 {
-                                    return RespType::Error("Expiration must be greater than 0.".to_string());
-                                }
-                                key_settings_builder = key_settings_builder.with_expiry(i as u64);
-                            }
-                            Err(_) => {
-                                return RespType::Error("Invalid expiration value format.".to_string());
-                            }
-                        }
-                    } else {
-                        return RespType::Error("Expiration must be an string.".to_string());
+                    match set_expire(args, key_settings_builder) {
+                        Ok(b) => key_settings_builder = b,
+                        Err(e) => return RespType::Error(e)
                     }
                 }
                 _ => {
@@ -67,5 +51,28 @@ impl SetCommand {
             value.get_string_value().unwrap().as_str(),
             key_settings_builder.build());
         RespType::SimpleString("OK".to_string())
+    }
+}
+
+fn set_expire(args: &mut VecDeque<RespType>, key_settings_builder: KeySettingsBuilder) -> Result<KeySettingsBuilder, String> {
+    if args.is_empty() {
+        return Err("No value specified for expiration.".to_string());
+    }
+    let value = args.pop_front().unwrap();
+    if value.is_string() {
+        let expiry = value.get_string_value().unwrap().parse::<i64>();
+        match expiry {
+            Ok(i) => {
+                if i < 1 {
+                    return Err("Expiration must be greater than 0.".to_string());
+                }
+                Ok(key_settings_builder.with_expiry(i as u64))
+            }
+            Err(_) => {
+                Err("Invalid expiration value format.".to_string())
+            }
+        }
+    } else {
+        Err("Expiration must be an string.".to_string())
     }
 }
