@@ -1,7 +1,9 @@
+use crate::commands::config::ConfigCommandExecutor;
 use crate::commands::echo::EchoCommand;
 use crate::commands::get::GetCommand;
 use crate::commands::ping::PingCommand;
 use crate::commands::set::SetCommand;
+use crate::config::Config;
 use crate::resp::RespType;
 use crate::storages::Storage;
 use std::collections::VecDeque;
@@ -11,14 +13,16 @@ const ECHO: &str = "ECHO";
 const PING: &str = "PING";
 const SET: &str = "SET";
 const GET: &str = "GET";
+const CONFIG: &str = "CONFIG";
 
 pub struct CommandExecutor {
     storage: Arc<Mutex<dyn Storage>>,
+    config_command_executor: ConfigCommandExecutor,
 }
 
 impl CommandExecutor {
-    pub fn new(storage: Arc<Mutex<dyn Storage>>) -> Self {
-        Self { storage }
+    pub fn new(storage: Arc<Mutex<dyn Storage>>, config: Arc<Config>) -> Self {
+        Self { storage, config_command_executor: ConfigCommandExecutor::new(config) }
     }
     pub fn execute(&self, command: &str) -> Result<String, String> {
         let resp_result = RespType::try_from(command);
@@ -45,10 +49,15 @@ impl CommandExecutor {
 
                 if command.is_string() {
                     let command = command.get_string_value().unwrap();
-                    if array.is_empty() {
-                        self.run_command_without_args(command.as_str())
-                    } else {
-                        self.run_command_with_args(command.as_str(), &mut array)
+                    match command.as_str() {
+                        CONFIG => self.config_command_executor.execute(&mut array),
+                        _ => {
+                            if array.is_empty() {
+                                self.run_command_without_args(command.as_str())
+                            } else {
+                                self.run_command_with_args(command.as_str(), &mut array)
+                            }
+                        }
                     }
                 } else {
                     RespType::Error("Invalid command. Expected bulk string or simple string.".to_string())
