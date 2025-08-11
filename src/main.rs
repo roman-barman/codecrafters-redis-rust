@@ -14,6 +14,8 @@ mod resp;
 mod storages;
 mod cli_args;
 mod config;
+mod handlers;
+mod mediators;
 
 fn main() {
     println!("Logs from your program will appear here!");
