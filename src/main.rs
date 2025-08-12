@@ -1,6 +1,8 @@
 use crate::cli_args::CliArgs;
 use crate::commands::CommandExecutor;
 use crate::config::Config;
+use crate::handlers::PingCommandHandler;
+use crate::mediators::MediatorImpl;
 use crate::storages::HashMapStorage;
 use crate::thread_pool::ThreadPool;
 use clap::Parser;
@@ -16,9 +18,13 @@ mod cli_args;
 mod config;
 mod handlers;
 mod mediators;
+mod command_parsers;
 
 fn main() {
     println!("Logs from your program will appear here!");
+
+    let mut mediator = MediatorImpl::new();
+    mediator.register(PingCommandHandler::new());
 
     let args = CliArgs::parse();
     let config = Config::from(args);
