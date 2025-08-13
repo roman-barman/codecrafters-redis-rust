@@ -1,4 +1,3 @@
-mod ping;
 mod echo;
 mod command_executor;
 mod set;

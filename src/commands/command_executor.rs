@@ -1,7 +1,6 @@
 use crate::commands::config::ConfigCommandExecutor;
 use crate::commands::echo::EchoCommand;
 use crate::commands::get::GetCommand;
-use crate::commands::ping::PingCommand;
 use crate::commands::set::SetCommand;
 use crate::config::Config;
 use crate::resp::RespType;
@@ -10,7 +9,6 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
 const ECHO: &str = "ECHO";
-const PING: &str = "PING";
 const SET: &str = "SET";
 const GET: &str = "GET";
 const CONFIG: &str = "CONFIG";
@@ -71,10 +69,6 @@ impl CommandExecutor {
 
     fn run_command_without_args(&self, command: &str) -> RespType {
         match command {
-            PING => {
-                let command = PingCommand;
-                command.execute()
-            }
             _ => RespType::Error(format!("Unknown command: {}", command))
         }
     }
