@@ -3,7 +3,7 @@ use crate::command_parsers::Commands;
 use crate::resp::RespType;
 use anyhow::Error;
 
-const COMMAND_NAME: &str = "PING";
+const COMMAND_NAME: &str = "ping";
 
 pub struct PingCommandParser;
 
@@ -34,5 +34,5 @@ impl CommandParser for PingCommandParser {
 }
 
 fn is_ping(command: &str) -> bool {
-    command == COMMAND_NAME
+    command.eq_ignore_ascii_case(COMMAND_NAME)
 }
