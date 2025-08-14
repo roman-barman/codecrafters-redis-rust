@@ -20,13 +20,20 @@ impl CommandParser for PingCommandParser {
         match command {
             RespType::SimpleString(s) => is_ping(s.as_str()),
             RespType::BulkString(s) => is_ping(s.as_str()),
+            RespType::Array(array) => {
+                if array.len() == 1 {
+                    let command = array.get(0).unwrap();
+                    self.can_parse(command)
+                } else {
+                    false
+                }
+            }
             _ => false
         }
     }
 }
 
 fn is_ping(command: &str) -> bool {
-    println!("is_ping: {}", command);
     command == COMMAND_NAME
 }
 
