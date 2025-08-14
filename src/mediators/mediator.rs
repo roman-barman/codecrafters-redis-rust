@@ -16,7 +16,7 @@ impl Mediator {
         }
     }
 
-    pub fn register<TCommand, TResult, THandler>(&mut self, handler: THandler)
+    pub fn register<TCommand, TResult, THandler>(&mut self, handler: Box<THandler>)
     where
         TCommand: Command<TResult> + 'static + Send + Sync,
         TResult: 'static + Send + Sync,
@@ -26,14 +26,14 @@ impl Mediator {
         self.handlers.insert(TypeId::of::<TCommand>(), Box::new(handler));
     }
 
-    pub fn send<TCommand, TResult>(&self, command: TCommand) -> Result<TResult, Error>
+    pub fn send<TCommand, TResult>(&self, command: Box<TCommand>) -> Result<TResult, Error>
     where
         TCommand: Command<TResult> + 'static + Send + Sync,
         TResult: 'static + Send + Sync,
     {
         let handler = self.handlers.get(&TypeId::of::<TCommand>())
             .ok_or_else(|| anyhow!("No handler registered for this command type"))?;
-        let result = handler.handle(Box::new(command))?;
+        let result = handler.handle(command)?;
         result.downcast::<TResult>()
             .map(|boxed| *boxed)
             .map_err(|_| anyhow!("Handler returned unexpected result type"))
@@ -50,7 +50,7 @@ where
     TResult: 'static + Send + Sync,
     THandler: CommandHandler<TCommand, TResult> + 'static + Send + Sync,
 {
-    handler: THandler,
+    handler: Box<THandler>,
     _pd: PhantomData<(TCommand, TResult)>,
 }
 
@@ -60,7 +60,7 @@ where
     TResult: 'static + Send + Sync,
     THandler: CommandHandler<TCommand, TResult> + 'static + Send + Sync,
 {
-    fn new(handler: THandler) -> Self {
+    fn new(handler: Box<THandler>) -> Self {
         Self {
             handler,
             _pd: PhantomData,
@@ -77,7 +77,7 @@ where
     fn handle(&self, command: Box<dyn Any>) -> Result<Box<dyn Any>, Error> {
         let command = command.downcast::<TCommand>()
             .map_err(|_| anyhow!("Invalid command type for this handler"))?;
-        let result = self.handler.handle(*command)?;
+        let result = self.handler.handle(&command)?;
         Ok(Box::new(result))
     }
 }

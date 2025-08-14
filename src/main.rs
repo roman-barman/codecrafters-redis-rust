@@ -27,7 +27,7 @@ fn main() {
     println!("Logs from your program will appear here!");
 
     let mut mediator = Mediator::new();
-    mediator.register(PingCommandHandler::new());
+    mediator.register(Box::new(PingCommandHandler::new()));
 
     let mut command_reader = CommandReader::new();
     command_reader.register(Box::new(PingCommandParser));

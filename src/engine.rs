@@ -24,7 +24,7 @@ impl Engine {
             Ok(c) => {
                 match c {
                     Commands::Ping => {
-                        self.mediator.send(PingCommand).map(|x| RespType::SimpleString(x))
+                        self.mediator.send(Box::new(PingCommand)).map(|x| RespType::SimpleString(x))
                     }
                 }
             }

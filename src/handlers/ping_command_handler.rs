@@ -10,7 +10,7 @@ impl PingCommandHandler {
 }
 
 impl CommandHandler<PingCommand, String> for PingCommandHandler {
-    fn handle(&self, _command: PingCommand) -> Result<String, anyhow::Error> {
+    fn handle(&self, _command: &PingCommand) -> Result<String, anyhow::Error> {
         Ok("PONG".to_string())
     }
 }
