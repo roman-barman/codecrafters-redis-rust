@@ -32,6 +32,7 @@ impl CommandReader {
     }
 
     fn read_from_resp(&self, resp: &RespType) -> Result<Commands, Error> {
+        println!("Parsers count: {}", self.parsers.len());
         for parser in self.parsers.iter() {
             if parser.can_parse(resp) {
                 return parser.parse(resp);
