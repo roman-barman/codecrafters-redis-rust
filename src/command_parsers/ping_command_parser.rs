@@ -26,6 +26,7 @@ impl CommandParser for PingCommandParser {
 }
 
 fn is_ping(command: &str) -> bool {
+    println!("is_ping: {}", command);
     command == COMMAND_NAME
 }
 
