@@ -9,10 +9,10 @@ pub struct PingCommandParser;
 
 impl CommandParser for PingCommandParser {
     fn parse(&self, command: &RespType) -> Result<Commands, Error> {
-        match command {
-            RespType::SimpleString(s) => parse_ping(s.as_str()),
-            RespType::Error(s) => parse_ping(s.as_str()),
-            _ => Err(anyhow::anyhow!("Invalid RESP type"))
+        if !self.can_parse(command) {
+            Err(anyhow::anyhow!("Invalid command"))
+        } else {
+            Ok(Commands::Ping)
         }
     }
 
@@ -35,12 +35,4 @@ impl CommandParser for PingCommandParser {
 
 fn is_ping(command: &str) -> bool {
     command == COMMAND_NAME
-}
-
-fn parse_ping(command: &str) -> Result<Commands, Error> {
-    if is_ping(command) {
-        Ok(Commands::Ping)
-    } else {
-        Err(anyhow::anyhow!("Invalid command"))
-    }
 }
