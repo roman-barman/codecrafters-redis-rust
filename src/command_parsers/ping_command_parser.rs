@@ -19,7 +19,7 @@ impl CommandParser for PingCommandParser {
     fn can_parse(&self, command: &RespType) -> bool {
         match command {
             RespType::SimpleString(s) => is_ping(s.as_str()),
-            RespType::Error(s) => is_ping(s.as_str()),
+            RespType::BulkString(s) => is_ping(s.as_str()),
             _ => false
         }
     }
