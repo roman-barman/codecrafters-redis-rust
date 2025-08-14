@@ -71,10 +71,15 @@ fn handle_client(mut stream: TcpStream, command_executor: Arc<CommandExecutor>, 
         let request = std::str::from_utf8(&buffer[..bytes_read]).unwrap().trim();
         println!("request: {}", request);
         let result = engine.handle_request(request);
-        if result.is_ok() {
-            let result: String = result.unwrap().into();
-            stream.write(result.as_bytes()).unwrap();
-            continue;
+        match result {
+            Ok(_) => {
+                let result: String = result.unwrap().into();
+                stream.write(result.as_bytes()).unwrap();
+                continue;
+            }
+            Err(e) => {
+                println!("error: {}", e);
+            }
         }
 
         let result = command_executor.execute(request);
