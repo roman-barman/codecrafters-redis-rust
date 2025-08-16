@@ -1,5 +1,4 @@
 use crate::commands::config::ConfigCommandExecutor;
-use crate::commands::echo::EchoCommand;
 use crate::commands::get::GetCommand;
 use crate::commands::set::SetCommand;
 use crate::config::Config;
@@ -8,7 +7,6 @@ use crate::storages::Storage;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-const ECHO: &str = "ECHO";
 const SET: &str = "SET";
 const GET: &str = "GET";
 const CONFIG: &str = "CONFIG";
@@ -75,10 +73,6 @@ impl CommandExecutor {
 
     fn run_command_with_args(&self, command: &str, args: &mut VecDeque<RespType>) -> RespType {
         match command {
-            ECHO => {
-                let command = EchoCommand;
-                command.execute(args)
-            }
             SET => {
                 let mut command = SetCommand::new(self.storage.clone());
                 command.execute(args)
