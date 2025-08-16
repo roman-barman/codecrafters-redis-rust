@@ -8,7 +8,7 @@ const COMMAND_NAME: &str = "ping";
 pub struct PingCommandParser;
 
 impl CommandParser for PingCommandParser {
-    fn parse(&self, command: &RespType) -> Result<Commands, Error> {
+    fn parse<'a>(&self, command: &'a RespType) -> Result<Commands<'a>, Error> {
         if !self.can_parse(command) {
             Err(anyhow::anyhow!("Invalid command"))
         } else {

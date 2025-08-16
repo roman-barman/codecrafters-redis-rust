@@ -18,20 +18,7 @@ impl CommandReader {
         self.parsers.push(parser);
     }
 
-    pub fn read(&self, request: &str) -> Result<Commands, Error> {
-        let resp_result = RespType::try_from(request);
-        match resp_result {
-            Err(e) => {
-                println!("Error: {}", e);
-                Err(e.into())
-            }
-            Ok(resp_type) => {
-                self.read_from_resp(&resp_type)
-            }
-        }
-    }
-
-    fn read_from_resp(&self, resp: &RespType) -> Result<Commands, Error> {
+    pub fn read<'a>(&self, resp: &'a RespType) -> Result<Commands<'a>, Error> {
         for parser in self.parsers.iter() {
             if parser.can_parse(resp) {
                 return parser.parse(resp);
@@ -40,5 +27,4 @@ impl CommandReader {
         Err(anyhow!("No parser found"))
     }
 }
-
 

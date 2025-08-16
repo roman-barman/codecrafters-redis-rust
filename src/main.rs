@@ -1,9 +1,9 @@
 use crate::cli_args::CliArgs;
-use crate::command_parsers::{CommandReader, PingCommandParser};
+use crate::command_parsers::{CommandReader, EchoCommandParser, PingCommandParser};
 use crate::commands::CommandExecutor;
 use crate::config::Config;
 use crate::engine::Engine;
-use crate::handlers::PingCommandHandler;
+use crate::handlers::{EchoCommandHandler, PingCommandHandler};
 use crate::mediators::Mediator;
 use crate::storages::HashMapStorage;
 use crate::thread_pool::ThreadPool;
@@ -28,9 +28,11 @@ fn main() {
 
     let mut mediator = Mediator::new();
     mediator.register(Box::new(PingCommandHandler::new()));
+    mediator.register(Box::new(EchoCommandHandler::new()));
 
     let mut command_reader = CommandReader::new();
     command_reader.register(Box::new(PingCommandParser));
+    command_reader.register(Box::new(EchoCommandParser));
 
     let engine = Arc::new(Engine::new(mediator, command_reader));
 
