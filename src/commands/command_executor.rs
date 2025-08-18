@@ -1,5 +1,4 @@
 use crate::commands::config::ConfigCommandExecutor;
-use crate::commands::get::GetCommand;
 use crate::commands::set::SetCommand;
 use crate::config::Config;
 use crate::resp::RespType;
@@ -8,7 +7,6 @@ use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
 const SET: &str = "SET";
-const GET: &str = "GET";
 const CONFIG: &str = "CONFIG";
 
 pub struct CommandExecutor {
@@ -75,10 +73,6 @@ impl CommandExecutor {
         match command {
             SET => {
                 let mut command = SetCommand::new(self.storage.clone());
-                command.execute(args)
-            }
-            GET => {
-                let command = GetCommand::new(self.storage.clone());
                 command.execute(args)
             }
             _ => RespType::Error(format!("Unknown command: {}", command))
