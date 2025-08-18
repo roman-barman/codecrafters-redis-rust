@@ -1,22 +1,18 @@
 use crate::commands::config::ConfigCommandExecutor;
-use crate::commands::set::SetCommand;
 use crate::config::Config;
 use crate::resp::RespType;
-use crate::storages::Storage;
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-const SET: &str = "SET";
 const CONFIG: &str = "CONFIG";
 
 pub struct CommandExecutor {
-    storage: Arc<Mutex<dyn Storage>>,
     config_command_executor: ConfigCommandExecutor,
 }
 
 impl CommandExecutor {
-    pub fn new(storage: Arc<Mutex<dyn Storage>>, config: Arc<Config>) -> Self {
-        Self { storage, config_command_executor: ConfigCommandExecutor::new(config) }
+    pub fn new(config: Arc<Config>) -> Self {
+        Self { config_command_executor: ConfigCommandExecutor::new(config) }
     }
     pub fn execute(&self, command: &str) -> Result<String, String> {
         let resp_result = RespType::try_from(command);
@@ -69,12 +65,8 @@ impl CommandExecutor {
         }
     }
 
-    fn run_command_with_args(&self, command: &str, args: &mut VecDeque<RespType>) -> RespType {
+    fn run_command_with_args(&self, command: &str, _: &mut VecDeque<RespType>) -> RespType {
         match command {
-            SET => {
-                let mut command = SetCommand::new(self.storage.clone());
-                command.execute(args)
-            }
             _ => RespType::Error(format!("Unknown command: {}", command))
         }
     }

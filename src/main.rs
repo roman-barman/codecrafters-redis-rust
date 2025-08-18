@@ -1,9 +1,9 @@
 use crate::cli_args::CliArgs;
-use crate::command_parsers::{CommandReader, EchoCommandParser, GetCommandParser, PingCommandParser};
+use crate::command_parsers::{CommandReader, EchoCommandParser, GetCommandParser, PingCommandParser, SetCommandParser};
 use crate::commands::CommandExecutor;
 use crate::config::Config;
 use crate::engine::Engine;
-use crate::handlers::{EchoCommandHandler, GetCommandHandler, PingCommandHandler};
+use crate::handlers::{EchoCommandHandler, GetCommandHandler, PingCommandHandler, SetCommandHandler};
 use crate::mediators::Mediator;
 use crate::storages::HashMapStorage;
 use crate::thread_pool::ThreadPool;
@@ -32,11 +32,13 @@ fn main() {
     mediator.register(Box::new(PingCommandHandler::new()));
     mediator.register(Box::new(EchoCommandHandler::new()));
     mediator.register(Box::new(GetCommandHandler::new(storage.clone())));
+    mediator.register(Box::new(SetCommandHandler::new(storage.clone())));
 
     let mut command_reader = CommandReader::new();
     command_reader.register(Box::new(PingCommandParser));
     command_reader.register(Box::new(EchoCommandParser));
     command_reader.register(Box::new(GetCommandParser));
+    command_reader.register(Box::new(SetCommandParser));
 
     let engine = Arc::new(Engine::new(mediator, command_reader));
 
@@ -45,7 +47,7 @@ fn main() {
 
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
     let pool = ThreadPool::new(4);
-    let command_executor = Arc::new(CommandExecutor::new(storage, Arc::new(config)));
+    let command_executor = Arc::new(CommandExecutor::new(Arc::new(config)));
 
     for stream in listener.incoming() {
         match stream {

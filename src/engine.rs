@@ -1,5 +1,5 @@
 use crate::command_parsers::{CommandReader, Commands};
-use crate::commands::{EchoCommand, GetCommand, PingCommand};
+use crate::commands::{EchoCommand, GetCommand, PingCommand, SetCommand};
 use crate::mediators::Mediator;
 use crate::resp::RespType;
 
@@ -33,6 +33,10 @@ impl Engine {
                     Commands::Get(s) => {
                         self.mediator.send(Box::new(GetCommand::new(s.to_string())))
                             .map(|x| x.map_or(RespType::NullBulkString, |s| RespType::BulkString(s)))
+                    }
+                    Commands::Set(arg) => {
+                        self.mediator.send(Box::new(SetCommand::new(arg.key.to_string(), arg.value.to_string(), arg.expiry)))
+                            .map(|x| RespType::BulkString(x))
                     }
                 }
             }
