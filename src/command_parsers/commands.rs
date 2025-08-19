@@ -3,6 +3,7 @@ pub enum Commands<'a> {
     Echo(&'a str),
     Get(&'a str),
     Set(SetArgs<'a>),
+    GetConfig(&'a str),
 }
 
 pub struct SetArgs<'a> {
