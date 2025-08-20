@@ -2,17 +2,16 @@ use crate::commands::{Command, GetConfigCommand};
 use crate::config::Config;
 use crate::handlers::CommandHandler;
 use anyhow::Error;
-use std::sync::Arc;
 
 const DIR: &str = "dir";
 const DB_FILE_NAME: &str = "dbfilename";
 
 pub struct GetConfigCommandHandler {
-    configuration: Arc<Config>,
+    configuration: Config,
 }
 
 impl GetConfigCommandHandler {
-    pub fn new(configuration: Arc<Config>) -> Self {
+    pub fn new(configuration: Config) -> Self {
         Self { configuration }
     }
 }
