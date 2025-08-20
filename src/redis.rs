@@ -77,7 +77,10 @@ fn handle(mut stream: TcpStream, engine: Arc<Engine>) {
     loop {
         let bytes_read = match stream.read(&mut buffer) {
             Ok(bytes_read) => bytes_read,
-            Err(_) => break
+            Err(e) => {
+                println!("read error: {}", e);
+                break;
+            }
         };
 
         if bytes_read == 0 {
