@@ -4,7 +4,6 @@ use crate::engine::Engine;
 use crate::handlers::{EchoCommandHandler, GetCommandHandler, GetConfigCommandHandler, PingCommandHandler, SetCommandHandler};
 use crate::mediators::Mediator;
 use crate::storages::HashMapStorage;
-use bytes::BytesMut;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{mpsc, Arc, Mutex};
@@ -73,14 +72,11 @@ impl Redis {
 }
 
 fn handle(mut stream: TcpStream, engine: Arc<Engine>) {
-    let mut buffer = BytesMut::with_capacity(512);
+    let mut buffer = [0; 512];
     loop {
         let bytes_read = match stream.read(&mut buffer) {
             Ok(bytes_read) => bytes_read,
-            Err(e) => {
-                println!("read error: {}", e);
-                break;
-            }
+            Err(_) => break
         };
 
         if bytes_read == 0 {
