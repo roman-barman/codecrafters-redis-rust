@@ -44,7 +44,6 @@ impl Redis {
                 let message = receiver.recv();
                 match message {
                     Ok(stream) => {
-                        println!("received new connection");
                         handle(stream, engine.clone());
                     }
                     Err(_) => break
@@ -66,6 +65,7 @@ impl Redis {
             }
         }
 
+        println!("server stopped");
         drop(sender);
         thread_receiver.join().unwrap();
     }
@@ -89,6 +89,7 @@ fn handle(mut stream: TcpStream, engine: Arc<Engine>) {
         match engine.handle_request(request) {
             Ok(result) => {
                 let result: String = result.into();
+                println!("result: {}", result);
                 match stream.write(result.as_bytes()) {
                     Ok(_) => (),
                     Err(_) => break
