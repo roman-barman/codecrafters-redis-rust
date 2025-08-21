@@ -23,11 +23,11 @@ impl Redis {
         let storage = Rc::new(RefCell::new(HashMapStorage::new()));
 
         let mut mediator = Mediator::new();
-        mediator.register(Box::new(PingCommandHandler::new()));
-        mediator.register(Box::new(EchoCommandHandler::new()));
-        mediator.register(Box::new(GetCommandHandler::new(storage.clone())));
-        mediator.register(Box::new(SetCommandHandler::new(storage.clone())));
-        mediator.register(Box::new(GetConfigCommandHandler::new(config)));
+        mediator.register(PingCommandHandler::new());
+        mediator.register(EchoCommandHandler::new());
+        mediator.register(GetCommandHandler::new(storage.clone()));
+        mediator.register(SetCommandHandler::new(storage.clone()));
+        mediator.register(GetConfigCommandHandler::new(config));
 
         let mut command_reader = CommandReader::new();
         command_reader.register(Box::new(PingCommandParser));

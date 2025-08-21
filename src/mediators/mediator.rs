@@ -17,7 +17,7 @@ impl Mediator {
         }
     }
 
-    pub fn register<TCommand, TResult, THandler>(&mut self, handler: Box<THandler>)
+    pub fn register<TCommand, TResult, THandler>(&mut self, handler: THandler)
     where
         TCommand: Command<TResult> + 'static,
         TResult: 'static,
@@ -51,7 +51,7 @@ where
     TResult: 'static,
     THandler: CommandHandler<TCommand, TResult> + 'static,
 {
-    handler: Box<THandler>,
+    handler: THandler,
     _pd: PhantomData<(TCommand, TResult)>,
 }
 
@@ -61,7 +61,7 @@ where
     TResult: 'static,
     THandler: CommandHandler<TCommand, TResult> + 'static,
 {
-    fn new(handler: Box<THandler>) -> Self {
+    fn new(handler: THandler) -> Self {
         Self {
             handler,
             _pd: PhantomData,
