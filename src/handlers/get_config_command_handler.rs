@@ -1,6 +1,6 @@
 use crate::commands::{Command, GetConfigCommand};
 use crate::config::Config;
-use crate::handlers::CommandHandler;
+use crate::core::CommandHandler;
 use anyhow::Error;
 
 const DIR: &str = "dir";

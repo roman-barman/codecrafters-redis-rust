@@ -1,5 +1,5 @@
 use crate::commands::GetCommand;
-use crate::handlers::CommandHandler;
+use crate::core::CommandHandler;
 use crate::storages::Storage;
 use anyhow::Error;
 use std::cell::RefCell;

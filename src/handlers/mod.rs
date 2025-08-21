@@ -1,5 +1,3 @@
-mod command_handler;
-pub use command_handler::*;
 mod echo_command_handler;
 mod get_command_handler;
 mod get_config_command_handler;

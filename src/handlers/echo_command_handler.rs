@@ -1,5 +1,5 @@
 use crate::commands::EchoCommand;
-use crate::handlers::CommandHandler;
+use crate::core::CommandHandler;
 use anyhow::Error;
 
 pub struct EchoCommandHandler;

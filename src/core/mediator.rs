@@ -1,5 +1,5 @@
 use crate::commands::Command;
-use crate::handlers::CommandHandler;
+use crate::core::CommandHandler;
 use anyhow::{anyhow, Error};
 use std::any::{Any, TypeId};
 use std::cell::RefCell;

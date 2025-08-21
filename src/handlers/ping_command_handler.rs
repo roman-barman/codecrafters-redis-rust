@@ -1,5 +1,5 @@
 use crate::commands::PingCommand;
-use crate::handlers::command_handler::CommandHandler;
+use crate::core::CommandHandler;
 
 pub struct PingCommandHandler;
 
