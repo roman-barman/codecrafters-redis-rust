@@ -2,20 +2,21 @@ use crate::commands::{Command, SetCommand};
 use crate::handlers::CommandHandler;
 use crate::storages::{KeySettingsBuilder, Storage};
 use anyhow::Error;
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct SetCommandHandler {
-    storage: Arc<Mutex<dyn Storage>>,
+    storage: Rc<RefCell<dyn Storage>>,
 }
 
 impl SetCommandHandler {
-    pub fn new(storage: Arc<Mutex<dyn Storage>>) -> Self {
+    pub fn new(storage: Rc<RefCell<dyn Storage>>) -> Self {
         Self { storage }
     }
 }
 
 impl CommandHandler<SetCommand, String> for SetCommandHandler {
-    fn handle(&self, command: &SetCommand) -> Result<String, Error>
+    fn handle(&mut self, command: &SetCommand) -> Result<String, Error>
     where
         SetCommand: Command<String>,
     {
@@ -25,8 +26,7 @@ impl CommandHandler<SetCommand, String> for SetCommandHandler {
             None => key_settings_builder
         };
 
-        self.storage.lock().map_err(|e| Error::msg(e.to_string()))?
-            .set(command.get_key(), command.get_value(), key_settings_builder.build());
+        self.storage.borrow_mut().set(command.get_key(), command.get_value(), key_settings_builder.build());
         Ok("OK".to_string())
     }
 }

@@ -7,19 +7,20 @@ use crate::storages::HashMapStorage;
 use anyhow::Error;
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 
 const LISTENER_TOKEN: Token = Token(0);
 
 pub struct Redis {
-    engine: Arc<Engine>,
+    engine: Engine,
 }
 
 impl Redis {
     pub fn new(config: Config) -> Self {
-        let storage = Arc::new(Mutex::new(HashMapStorage::new()));
+        let storage = Rc::new(RefCell::new(HashMapStorage::new()));
 
         let mut mediator = Mediator::new();
         mediator.register(Box::new(PingCommandHandler::new()));
@@ -35,7 +36,7 @@ impl Redis {
         command_reader.register(Box::new(SetCommandParser));
         command_reader.register(Box::new(GetConfigCommandParser));
 
-        let engine = Arc::new(Engine::new(mediator, command_reader));
+        let engine = Engine::new(mediator, command_reader);
         Self {
             engine
         }

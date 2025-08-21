@@ -17,7 +17,7 @@ impl GetConfigCommandHandler {
 }
 
 impl CommandHandler<GetConfigCommand, String> for GetConfigCommandHandler {
-    fn handle(&self, command: &GetConfigCommand) -> Result<String, Error>
+    fn handle(&mut self, command: &GetConfigCommand) -> Result<String, Error>
     where
         GetConfigCommand: Command<String>,
     {
