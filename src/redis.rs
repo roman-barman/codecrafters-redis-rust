@@ -4,9 +4,14 @@ use crate::engine::Engine;
 use crate::handlers::{EchoCommandHandler, GetCommandHandler, GetConfigCommandHandler, PingCommandHandler, SetCommandHandler};
 use crate::mediators::Mediator;
 use crate::storages::HashMapStorage;
+use anyhow::Error;
+use mio::net::TcpListener;
+use mio::{Events, Interest, Poll, Token};
+use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex};
+
+const LISTENER_TOKEN: Token = Token(0);
 
 pub struct Redis {
     engine: Arc<Engine>,
@@ -37,66 +42,70 @@ impl Redis {
     }
 
     pub fn run(&self) {
-        let (sender, receiver) = mpsc::channel();
-        let engine = self.engine.clone();
-        let thread_receiver = std::thread::spawn(move || {
-            loop {
-                let message = receiver.recv();
-                match message {
-                    Ok(stream) => {
-                        handle(stream, engine.clone());
+        let mut poll = Poll::new().unwrap();
+        let addr = "127.0.0.1:6379".parse().unwrap();
+        let mut listener = TcpListener::bind(addr).unwrap();
+
+        poll.registry().register(&mut listener, LISTENER_TOKEN, Interest::READABLE).unwrap();
+
+        let mut events = Events::with_capacity(1024);
+        let mut connections = HashMap::new();
+        let mut next_token = Token(1);
+
+        loop {
+            poll.poll(&mut events, None).unwrap();
+
+            for event in events.iter() {
+                match event.token() {
+                    LISTENER_TOKEN => {
+                        let (mut stream, _) = listener.accept().unwrap();
+                        let token = next_token;
+                        next_token.0 += 1;
+                        poll.registry().register(&mut stream, token, Interest::READABLE | Interest::WRITABLE).unwrap();
+                        connections.insert(token, stream);
                     }
-                    Err(_) => break
-                }
-            }
-        });
-
-        let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
-
-        for stream in listener.incoming() {
-            match stream {
-                Ok(stream) => {
-                    println!("accepted new connection");
-                    sender.send(stream).unwrap();
-                }
-                Err(e) => {
-                    println!("connection error: {}", e);
+                    token => {
+                        let stream = connections.get_mut(&token).unwrap();
+                        if event.is_readable() {
+                            let mut buffer = [0; 512];
+                            match stream.read(&mut buffer) {
+                                Ok(0) => {
+                                    poll.registry().deregister(stream).unwrap();
+                                    connections.remove(&token);
+                                }
+                                Ok(n) => {
+                                    if event.is_writable() {
+                                        match self.handle(&buffer[..n]) {
+                                            Ok(response) => {
+                                                stream.write(response.as_bytes()).unwrap();
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                }
+                                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+                                Err(e) => println!("error: {}", e),
+                            }
+                        }
+                    }
                 }
             }
         }
-
-        println!("server stopped");
-        drop(sender);
-        thread_receiver.join().unwrap();
     }
-}
 
-fn handle(mut stream: TcpStream, engine: Arc<Engine>) {
-    let mut buffer = [0; 512];
-    loop {
-        let bytes_read = match stream.read(&mut buffer) {
-            Ok(bytes_read) => bytes_read,
-            Err(_) => break
-        };
-
-        if bytes_read == 0 {
-            break;
-        }
-
-        let request = std::str::from_utf8(&buffer[..bytes_read]).unwrap().trim();
+    fn handle(&self, buffer: &[u8]) -> Result<String, Error> {
+        let request = std::str::from_utf8(buffer)?.trim();
         println!("request: {}", request);
 
-        match engine.handle_request(request) {
+        match self.engine.handle_request(request) {
             Ok(result) => {
                 let result: String = result.into();
-                println!("result: {}", result);
-                match stream.write(result.as_bytes()) {
-                    Ok(_) => (),
-                    Err(_) => break
-                }
+                println!("response: {}", result);
+                Ok(result)
             }
             Err(e) => {
                 println!("error: {}", e);
+                Err(e)
             }
         }
     }
