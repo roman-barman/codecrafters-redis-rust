@@ -20,13 +20,17 @@ impl CommandParser for GetCommandParser {
                     match value {
                         RespType::SimpleString(s) => Ok(Commands::Get(s.as_str())),
                         RespType::BulkString(s) => Ok(Commands::Get(s.as_str())),
-                        _ => Err(anyhow::anyhow!("Unexpected RESP type for GET command argument"))
+                        _ => Err(anyhow::anyhow!(
+                            "Unexpected RESP type for GET command argument"
+                        )),
                     }
                 } else {
-                    Err(anyhow::anyhow!("Unexpected arguments number for GET command"))
+                    Err(anyhow::anyhow!(
+                        "Unexpected arguments number for GET command"
+                    ))
                 }
             }
-            _ => Err(anyhow::anyhow!("Unexpected RESP type for GET command"))
+            _ => Err(anyhow::anyhow!("Unexpected RESP type for GET command")),
         }
     }
 
@@ -38,13 +42,13 @@ impl CommandParser for GetCommandParser {
                     match command {
                         RespType::BulkString(command) => is_get(command),
                         RespType::SimpleString(command) => is_get(command),
-                        _ => false
+                        _ => false,
                     }
                 } else {
                     false
                 }
             }
-            _ => false
+            _ => false,
         }
     }
 }

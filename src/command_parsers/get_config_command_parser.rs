@@ -21,13 +21,19 @@ impl CommandParser for GetConfigCommandParser {
                     match value {
                         RespType::SimpleString(s) => Ok(Commands::GetConfig(s.as_str())),
                         RespType::BulkString(s) => Ok(Commands::GetConfig(s.as_str())),
-                        _ => Err(anyhow::anyhow!("Unexpected RESP type for CONFIG GET command argument"))
+                        _ => Err(anyhow::anyhow!(
+                            "Unexpected RESP type for CONFIG GET command argument"
+                        )),
                     }
                 } else {
-                    Err(anyhow::anyhow!("Unexpected arguments number for CONFIG GET command"))
+                    Err(anyhow::anyhow!(
+                        "Unexpected arguments number for CONFIG GET command"
+                    ))
                 }
             }
-            _ => Err(anyhow::anyhow!("Unexpected RESP type for CONFIG GET command"))
+            _ => Err(anyhow::anyhow!(
+                "Unexpected RESP type for CONFIG GET command"
+            )),
         }
     }
 
@@ -39,14 +45,14 @@ impl CommandParser for GetConfigCommandParser {
                     let is_command = match command {
                         RespType::BulkString(command) => is_config(command),
                         RespType::SimpleString(command) => is_config(command),
-                        _ => false
+                        _ => false,
                     };
 
                     let sub_command = array.get(1).unwrap();
                     let is_sub_command = match sub_command {
                         RespType::BulkString(command) => is_get(command),
                         RespType::SimpleString(command) => is_get(command),
-                        _ => false
+                        _ => false,
                     };
 
                     is_command && is_sub_command
@@ -54,7 +60,7 @@ impl CommandParser for GetConfigCommandParser {
                     false
                 }
             }
-            _ => false
+            _ => false,
         }
     }
 }

@@ -23,9 +23,20 @@ impl CommandHandler<GetConfigCommand, String> for GetConfigCommandHandler {
     {
         let arg = command.as_ref();
         if arg.eq_ignore_ascii_case(DIR) {
-            Ok(format!("{} {}", DIR, self.configuration.dir.as_ref().unwrap_or(&"".to_string())))
+            Ok(format!(
+                "{} {}",
+                DIR,
+                self.configuration.dir.as_ref().unwrap_or(&"".to_string())
+            ))
         } else if arg.eq_ignore_ascii_case(DB_FILE_NAME) {
-            Ok(format!("{} {}", DB_FILE_NAME, self.configuration.dbfilename.as_ref().unwrap_or(&"".to_string())))
+            Ok(format!(
+                "{} {}",
+                DB_FILE_NAME,
+                self.configuration
+                    .dbfilename
+                    .as_ref()
+                    .unwrap_or(&"".to_string())
+            ))
         } else {
             Err(anyhow::anyhow!("{} unknown argument", arg))
         }

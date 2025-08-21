@@ -22,13 +22,15 @@ impl CommandParser for EchoCommandParser {
                     match value {
                         RespType::SimpleString(s) => Ok(Commands::Echo(s.as_str())),
                         RespType::BulkString(s) => Ok(Commands::Echo(s.as_str())),
-                        _ => Err(anyhow::anyhow!("Unexpected RESP type for ECHO command argument"))
+                        _ => Err(anyhow::anyhow!(
+                            "Unexpected RESP type for ECHO command argument"
+                        )),
                     }
                 } else {
                     Ok(Commands::Echo(""))
                 }
             }
-            _ => Err(anyhow::anyhow!("Unexpected RESP type for ECHO command"))
+            _ => Err(anyhow::anyhow!("Unexpected RESP type for ECHO command")),
         }
     }
 
@@ -44,7 +46,7 @@ impl CommandParser for EchoCommandParser {
                     false
                 }
             }
-            _ => false
+            _ => false,
         }
     }
 }

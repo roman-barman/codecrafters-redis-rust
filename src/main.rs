@@ -3,16 +3,16 @@ use crate::config::Config;
 use crate::redis::Redis;
 use clap::Parser;
 
-mod commands;
-mod resp;
-mod storages;
 mod cli_args;
+mod command_parsers;
+mod commands;
 mod config;
+mod engine;
 mod handlers;
 mod mediators;
-mod command_parsers;
-mod engine;
 mod redis;
+mod resp;
+mod storages;
 
 fn main() {
     println!("Logs from your program will appear here!");

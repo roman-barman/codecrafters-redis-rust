@@ -20,12 +20,20 @@ impl CommandParser for SetCommandParser {
                     let key = match array.get(1).unwrap() {
                         RespType::SimpleString(s) => s.as_str(),
                         RespType::BulkString(s) => s.as_str(),
-                        _ => return Err(anyhow::anyhow!("Unexpected RESP type for SET key argument"))
+                        _ => {
+                            return Err(anyhow::anyhow!(
+                                "Unexpected RESP type for SET key argument"
+                            ))
+                        }
                     };
                     let value = match array.get(2).unwrap() {
                         RespType::SimpleString(s) => s.as_str(),
                         RespType::BulkString(s) => s.as_str(),
-                        _ => return Err(anyhow::anyhow!("Unexpected RESP type for SET value argument"))
+                        _ => {
+                            return Err(anyhow::anyhow!(
+                                "Unexpected RESP type for SET value argument"
+                            ))
+                        }
                     };
 
                     let mut result = SetArgs {
@@ -39,16 +47,28 @@ impl CommandParser for SetCommandParser {
                         let arg_name = match array.get(i).unwrap() {
                             RespType::SimpleString(s) => s.as_str(),
                             RespType::BulkString(s) => s.as_str(),
-                            _ => return Err(anyhow::anyhow!("Unexpected RESP type for SET argument"))
+                            _ => {
+                                return Err(anyhow::anyhow!(
+                                    "Unexpected RESP type for SET argument"
+                                ))
+                            }
                         };
                         i += 1;
 
                         if is_expiry(arg_name) {
                             let arg_value = match array.get(i) {
-                                None => return Err(anyhow::anyhow!("px argument does not have a value")),
+                                None => {
+                                    return Err(anyhow::anyhow!(
+                                        "px argument does not have a value"
+                                    ))
+                                }
                                 Some(RespType::BulkString(s)) => s.as_str(),
                                 Some(RespType::SimpleString(s)) => s.as_str(),
-                                _ => return Err(anyhow::anyhow!("Unexpected RESP type for SET argument"))
+                                _ => {
+                                    return Err(anyhow::anyhow!(
+                                        "Unexpected RESP type for SET argument"
+                                    ))
+                                }
                             };
                             let arg_value = arg_value.parse::<u64>()?;
                             result.expiry = Some(arg_value);
@@ -66,10 +86,12 @@ impl CommandParser for SetCommandParser {
 
                     Ok(Commands::Set(result))
                 } else {
-                    Err(anyhow::anyhow!("Unexpected arguments number for SET command"))
+                    Err(anyhow::anyhow!(
+                        "Unexpected arguments number for SET command"
+                    ))
                 }
             }
-            _ => Err(anyhow::anyhow!("Unexpected RESP type for SET command"))
+            _ => Err(anyhow::anyhow!("Unexpected RESP type for SET command")),
         }
     }
 
@@ -81,13 +103,13 @@ impl CommandParser for SetCommandParser {
                     match command {
                         RespType::BulkString(command) => is_set(command),
                         RespType::SimpleString(command) => is_set(command),
-                        _ => false
+                        _ => false,
                     }
                 } else {
                     false
                 }
             }
-            _ => false
+            _ => false,
         }
     }
 }

@@ -18,7 +18,7 @@ impl Storage for HashMapStorage {
     fn get(&mut self, key: &str) -> Option<&str> {
         let should_remove = match self.storage.get(key) {
             None => return None,
-            Some(v) => v.is_value_expired()
+            Some(v) => v.is_value_expired(),
         };
 
         if should_remove {

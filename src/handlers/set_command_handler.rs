@@ -23,10 +23,14 @@ impl CommandHandler<SetCommand, String> for SetCommandHandler {
         let mut key_settings_builder = KeySettingsBuilder::new();
         key_settings_builder = match command.get_expiry() {
             Some(value) => key_settings_builder.with_expiry(*value),
-            None => key_settings_builder
+            None => key_settings_builder,
         };
 
-        self.storage.borrow_mut().set(command.get_key(), command.get_value(), key_settings_builder.build());
+        self.storage.borrow_mut().set(
+            command.get_key(),
+            command.get_value(),
+            key_settings_builder.build(),
+        );
         Ok("OK".to_string())
     }
 }

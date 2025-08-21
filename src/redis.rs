@@ -1,7 +1,13 @@
-use crate::command_parsers::{CommandReader, EchoCommandParser, GetCommandParser, GetConfigCommandParser, PingCommandParser, SetCommandParser};
+use crate::command_parsers::{
+    CommandReader, EchoCommandParser, GetCommandParser, GetConfigCommandParser, PingCommandParser,
+    SetCommandParser,
+};
 use crate::config::Config;
 use crate::engine::Engine;
-use crate::handlers::{EchoCommandHandler, GetCommandHandler, GetConfigCommandHandler, PingCommandHandler, SetCommandHandler};
+use crate::handlers::{
+    EchoCommandHandler, GetCommandHandler, GetConfigCommandHandler, PingCommandHandler,
+    SetCommandHandler,
+};
 use crate::mediators::Mediator;
 use crate::storages::HashMapStorage;
 use anyhow::Error;
@@ -37,9 +43,7 @@ impl Redis {
         command_reader.register(GetConfigCommandParser);
 
         let engine = Engine::new(mediator, command_reader);
-        Self {
-            engine
-        }
+        Self { engine }
     }
 
     pub fn run(&self) {
@@ -47,7 +51,9 @@ impl Redis {
         let addr = "127.0.0.1:6379".parse().unwrap();
         let mut listener = TcpListener::bind(addr).unwrap();
 
-        poll.registry().register(&mut listener, LISTENER_TOKEN, Interest::READABLE).unwrap();
+        poll.registry()
+            .register(&mut listener, LISTENER_TOKEN, Interest::READABLE)
+            .unwrap();
 
         let mut events = Events::with_capacity(1024);
         let mut connections = HashMap::new();
@@ -62,7 +68,9 @@ impl Redis {
                         let (mut stream, _) = listener.accept().unwrap();
                         let token = next_token;
                         next_token.0 += 1;
-                        poll.registry().register(&mut stream, token, Interest::READABLE | Interest::WRITABLE).unwrap();
+                        poll.registry()
+                            .register(&mut stream, token, Interest::READABLE | Interest::WRITABLE)
+                            .unwrap();
                         connections.insert(token, stream);
                     }
                     token => {

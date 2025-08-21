@@ -28,7 +28,7 @@ impl CommandParser for PingCommandParser {
                     false
                 }
             }
-            _ => false
+            _ => false,
         }
     }
 }

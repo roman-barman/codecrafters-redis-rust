@@ -8,11 +8,7 @@ pub struct SetCommand {
 
 impl SetCommand {
     pub fn new(key: String, value: String, expiry: Option<u64>) -> Self {
-        Self {
-            key,
-            value,
-            expiry,
-        }
+        Self { key, value, expiry }
     }
 
     pub fn get_key(&self) -> &str {

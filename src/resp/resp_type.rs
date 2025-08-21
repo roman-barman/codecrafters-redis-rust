@@ -10,7 +10,6 @@ const ARRAY_PREFIX: char = '*';
 const ERROR_PREFIX: char = '-';
 const INTEGER_PREFIX: char = ':';
 
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum RespType {
     SimpleString(String),
@@ -42,7 +41,7 @@ impl RespType {
         match self {
             RespType::SimpleString(_) => true,
             RespType::BulkString(_) => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -50,7 +49,7 @@ impl RespType {
         match self {
             RespType::SimpleString(s) => Some(s),
             RespType::BulkString(s) => Some(s),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -67,22 +66,18 @@ fn read_resp_type(chars: &mut Chars) -> Result<RespType, RespParseError> {
     let first = chars.next();
 
     match first {
-        Some(c) => {
-            match c {
-                SIMPLE_STRING_PREFIX => read_simple_string(chars).map(RespType::SimpleString),
-                BULK_STRING_PREFIX => read_bulk_string(chars).map(|x| match x {
-                    Some(s) => RespType::BulkString(s),
-                    None => RespType::NullBulkString
-                }),
-                ERROR_PREFIX => read_error(chars).map(RespType::Error),
-                ARRAY_PREFIX => read_array(chars).map(RespType::Array),
-                INTEGER_PREFIX => read_integer(chars).map(RespType::Integer),
-                _ => Err(RespParseError::UnknownType)
-            }
-        }
-        None => {
-            Err(RespParseError::EmptyValue)
-        }
+        Some(c) => match c {
+            SIMPLE_STRING_PREFIX => read_simple_string(chars).map(RespType::SimpleString),
+            BULK_STRING_PREFIX => read_bulk_string(chars).map(|x| match x {
+                Some(s) => RespType::BulkString(s),
+                None => RespType::NullBulkString,
+            }),
+            ERROR_PREFIX => read_error(chars).map(RespType::Error),
+            ARRAY_PREFIX => read_array(chars).map(RespType::Array),
+            INTEGER_PREFIX => read_integer(chars).map(RespType::Integer),
+            _ => Err(RespParseError::UnknownType),
+        },
+        None => Err(RespParseError::EmptyValue),
     }
 }
 
@@ -92,7 +87,9 @@ fn read_integer(chars: &mut Chars) -> Result<i64, RespParseError> {
         return Err(RespParseError::UnexpectedEof);
     }
 
-    value.parse().map_err(|_| RespParseError::InvalidIntegerFormat)
+    value
+        .parse()
+        .map_err(|_| RespParseError::InvalidIntegerFormat)
 }
 
 fn read_array(chars: &mut Chars) -> Result<VecDeque<RespType>, RespParseError> {
@@ -101,7 +98,9 @@ fn read_array(chars: &mut Chars) -> Result<VecDeque<RespType>, RespParseError> {
         return Err(RespParseError::UnexpectedEof);
     }
 
-    let len: u64 = len.parse().map_err(|_| RespParseError::InvalidArrayLengthFormat)?;
+    let len: u64 = len
+        .parse()
+        .map_err(|_| RespParseError::InvalidArrayLengthFormat)?;
     let mut result = VecDeque::with_capacity(len as usize);
 
     for _ in 0..len {
@@ -130,12 +129,17 @@ fn read_error(chars: &mut Chars) -> Result<String, RespParseError> {
 }
 
 fn read_bulk_string(chars: &mut Chars) -> Result<Option<String>, RespParseError> {
-    let len: String = chars.by_ref().take_while(|c| c != &'\r').collect::<String>();
+    let len: String = chars
+        .by_ref()
+        .take_while(|c| c != &'\r')
+        .collect::<String>();
     if chars.next() != Some(LF) {
         return Err(RespParseError::UnexpectedEof);
     }
 
-    let len: i64 = len.parse().map_err(|_| RespParseError::InvalidBulkStringLengthFormat)?;
+    let len: i64 = len
+        .parse()
+        .map_err(|_| RespParseError::InvalidBulkStringLengthFormat)?;
     let result = match len {
         ..0 => None,
         0 => Some("".to_string()),
@@ -160,7 +164,9 @@ impl From<RespType> for String {
     fn from(resp_type: RespType) -> Self {
         match resp_type {
             RespType::SimpleString(s) => format!("{}{}{}", SIMPLE_STRING_PREFIX, s, CRLF),
-            RespType::BulkString(s) => format!("{}{}{}{}{}", BULK_STRING_PREFIX, s.len(), CRLF, s, CRLF),
+            RespType::BulkString(s) => {
+                format!("{}{}{}{}{}", BULK_STRING_PREFIX, s.len(), CRLF, s, CRLF)
+            }
             RespType::NullBulkString => format!("{}-1{}", BULK_STRING_PREFIX, CRLF),
             RespType::Error(s) => format!("{}{}{}", ERROR_PREFIX, s, CRLF),
             RespType::Integer(i) => format!("{}{}{}", INTEGER_PREFIX, i, CRLF),
@@ -188,17 +194,26 @@ mod tests {
 
     #[test]
     fn test_try_form_simple_string() {
-        assert_eq!(RespType::try_from("+OK\r\n"), Ok(RespType::SimpleString("OK".to_string())));
+        assert_eq!(
+            RespType::try_from("+OK\r\n"),
+            Ok(RespType::SimpleString("OK".to_string()))
+        );
     }
 
     #[test]
     fn test_try_form_bulk_string() {
-        assert_eq!(RespType::try_from("$5\r\nhello\r\n"), Ok(RespType::BulkString("hello".to_string())));
+        assert_eq!(
+            RespType::try_from("$5\r\nhello\r\n"),
+            Ok(RespType::BulkString("hello".to_string()))
+        );
     }
 
     #[test]
     fn test_try_form_empty_bulk_string() {
-        assert_eq!(RespType::try_from("$0\r\n\r\n"), Ok(RespType::BulkString("".to_string())));
+        assert_eq!(
+            RespType::try_from("$0\r\n\r\n"),
+            Ok(RespType::BulkString("".to_string()))
+        );
     }
 
     #[test]
@@ -208,16 +223,21 @@ mod tests {
 
     #[test]
     fn test_try_form_error() {
-        assert_eq!(RespType::try_from("-Error message\r\n"), Ok(RespType::Error("Error message".to_string())));
+        assert_eq!(
+            RespType::try_from("-Error message\r\n"),
+            Ok(RespType::Error("Error message".to_string()))
+        );
     }
 
     #[test]
     fn test_try_form_array() {
-        assert_eq!(RespType::try_from("*2\r\n$4\r\nECHO\r\n$5\r\nmango\r\n"),
-                   Ok(RespType::Array(VecDeque::from(vec![
-                       RespType::BulkString("ECHO".to_string()),
-                       RespType::BulkString("mango".to_string())
-                   ]))));
+        assert_eq!(
+            RespType::try_from("*2\r\n$4\r\nECHO\r\n$5\r\nmango\r\n"),
+            Ok(RespType::Array(VecDeque::from(vec![
+                RespType::BulkString("ECHO".to_string()),
+                RespType::BulkString("mango".to_string())
+            ])))
+        );
     }
 
     #[test]
@@ -254,8 +274,9 @@ mod tests {
     fn test_array_to_string() {
         let result: String = RespType::Array(VecDeque::from(vec![
             RespType::BulkString("hello".to_string()),
-            RespType::BulkString("world".to_string())
-        ])).into();
+            RespType::BulkString("world".to_string()),
+        ]))
+        .into();
         assert_eq!(result, "*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n".to_string());
     }
 }

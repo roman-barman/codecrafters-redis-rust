@@ -6,9 +6,7 @@ pub struct GetCommand {
 
 impl GetCommand {
     pub fn new(key: String) -> Self {
-        Self {
-            key
-        }
+        Self { key }
     }
 }
 

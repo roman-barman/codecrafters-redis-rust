@@ -6,9 +6,7 @@ pub struct GetConfigCommand {
 
 impl GetConfigCommand {
     pub fn new(configuration_name: String) -> Self {
-        Self {
-            configuration_name,
-        }
+        Self { configuration_name }
     }
 }
 

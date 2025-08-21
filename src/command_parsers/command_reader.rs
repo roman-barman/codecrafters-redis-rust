@@ -9,9 +9,7 @@ pub struct CommandReader {
 
 impl CommandReader {
     pub fn new() -> Self {
-        CommandReader {
-            parsers: vec![]
-        }
+        CommandReader { parsers: vec![] }
     }
 
     pub fn register<TParser>(&mut self, parser: TParser)
@@ -30,4 +28,3 @@ impl CommandReader {
         Err(anyhow!("No parser found"))
     }
 }
-

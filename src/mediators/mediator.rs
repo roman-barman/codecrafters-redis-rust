@@ -24,7 +24,8 @@ impl Mediator {
         THandler: CommandHandler<TCommand, TResult> + 'static,
     {
         let handler = HandlerAdapter::new(handler);
-        self.handlers.insert(TypeId::of::<TCommand>(), Box::new(RefCell::new(handler)));
+        self.handlers
+            .insert(TypeId::of::<TCommand>(), Box::new(RefCell::new(handler)));
     }
 
     pub fn send<TCommand, TResult>(&self, command: Box<TCommand>) -> Result<TResult, Error>
@@ -32,10 +33,13 @@ impl Mediator {
         TCommand: Command<TResult> + 'static,
         TResult: 'static,
     {
-        let handler = self.handlers.get(&TypeId::of::<TCommand>())
+        let handler = self
+            .handlers
+            .get(&TypeId::of::<TCommand>())
             .ok_or_else(|| anyhow!("No handler registered for this command type"))?;
         let result = handler.borrow_mut().handle(command)?;
-        result.downcast::<TResult>()
+        result
+            .downcast::<TResult>()
             .map(|boxed| *boxed)
             .map_err(|_| anyhow!("Handler returned unexpected result type"))
     }
@@ -76,7 +80,8 @@ where
     THandler: CommandHandler<TCommand, TResult> + 'static,
 {
     fn handle(&mut self, command: Box<dyn Any>) -> Result<Box<dyn Any>, Error> {
-        let command = command.downcast::<TCommand>()
+        let command = command
+            .downcast::<TCommand>()
             .map_err(|_| anyhow!("Invalid command type for this handler"))?;
         let result = self.handler.handle(&command)?;
         Ok(Box::new(result))

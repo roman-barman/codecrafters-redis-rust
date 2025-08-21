@@ -17,10 +17,12 @@ impl GetCommandHandler {
 
 impl CommandHandler<GetCommand, Option<String>> for GetCommandHandler {
     fn handle(&mut self, command: &GetCommand) -> Result<Option<String>, Error> {
-        match self.storage
+        match self
+            .storage
             .borrow_mut()
             .get(command.as_ref())
-            .map(String::from) {
+            .map(String::from)
+        {
             Some(s) => Ok(Some(s)),
             None => Ok(None),
         }

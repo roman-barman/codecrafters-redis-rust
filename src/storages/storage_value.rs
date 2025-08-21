@@ -20,7 +20,8 @@ impl StorageValue {
             return false;
         }
 
-        let expired_at = self.created_at + TimeDelta::try_milliseconds(self.key_settings.expiry.unwrap() as i64).unwrap();
+        let expired_at = self.created_at
+            + TimeDelta::try_milliseconds(self.key_settings.expiry.unwrap() as i64).unwrap();
         expired_at <= Local::now()
     }
 }
@@ -30,7 +31,6 @@ impl AsRef<str> for StorageValue {
         &self.value
     }
 }
-
 
 pub struct KeySettings {
     expiry: Option<u64>,
@@ -56,4 +56,3 @@ impl KeySettingsBuilder {
         self.settings
     }
 }
-
