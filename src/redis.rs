@@ -30,11 +30,11 @@ impl Redis {
         mediator.register(GetConfigCommandHandler::new(config));
 
         let mut command_reader = CommandReader::new();
-        command_reader.register(Box::new(PingCommandParser));
-        command_reader.register(Box::new(EchoCommandParser));
-        command_reader.register(Box::new(GetCommandParser));
-        command_reader.register(Box::new(SetCommandParser));
-        command_reader.register(Box::new(GetConfigCommandParser));
+        command_reader.register(PingCommandParser);
+        command_reader.register(EchoCommandParser);
+        command_reader.register(GetCommandParser);
+        command_reader.register(SetCommandParser);
+        command_reader.register(GetConfigCommandParser);
 
         let engine = Engine::new(mediator, command_reader);
         Self {

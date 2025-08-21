@@ -14,8 +14,11 @@ impl CommandReader {
         }
     }
 
-    pub fn register(&mut self, parser: Box<dyn CommandParser>) {
-        self.parsers.push(parser);
+    pub fn register<TParser>(&mut self, parser: TParser)
+    where
+        TParser: CommandParser + 'static,
+    {
+        self.parsers.push(Box::new(parser));
     }
 
     pub fn read<'a>(&self, resp: &'a RespType) -> Result<Commands<'a>, Error> {
