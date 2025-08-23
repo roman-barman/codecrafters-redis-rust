@@ -1,6 +1,6 @@
 use crate::cli_args::CliArgs;
 use crate::config::Config;
-use crate::redis::Redis;
+use crate::redis::Server;
 use clap::Parser;
 
 mod cli_args;
@@ -17,6 +17,6 @@ fn main() {
     println!("Logs from your program will appear here!");
 
     let args = CliArgs::parse();
-    let redis = Redis::new(Config::from(args));
+    let redis = Server::new(Config::from(args));
     redis.run();
 }

@@ -19,11 +19,11 @@ use std::rc::Rc;
 
 const LISTENER_TOKEN: Token = Token(0);
 
-pub struct Redis {
+pub struct Server {
     engine: Engine,
 }
 
-impl Redis {
+impl Server {
     pub fn new(config: Config) -> Self {
         let storage = Rc::new(RefCell::new(HashMapStorage::new()));
 
