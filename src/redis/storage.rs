@@ -1,18 +1,25 @@
 use chrono::{DateTime, Local, TimeDelta};
 use std::collections::HashMap;
 
-pub struct Storage {
+pub trait Storage {
+    fn get(&mut self, key: &str) -> Option<&str>;
+    fn set(&mut self, key: String, value: String, key_settings: KeySettings);
+}
+
+pub struct RedisStorage {
     storage: HashMap<String, (String, KeySettings)>,
 }
 
-impl Storage {
+impl RedisStorage {
     pub fn new() -> Self {
         Self {
             storage: HashMap::new()
         }
     }
+}
 
-    pub fn get(&mut self, key: &str) -> Option<&str> {
+impl Storage for RedisStorage {
+    fn get(&mut self, key: &str) -> Option<&str> {
         let should_remove = match self.storage.get(key) {
             None => return None,
             Some((_, settings)) => settings.ttl.is_some() && settings.ttl.unwrap() <= Local::now(),
@@ -26,7 +33,7 @@ impl Storage {
         }
     }
 
-    pub fn set(&mut self, key: String, value: String, key_settings: KeySettings) {
+    fn set(&mut self, key: String, value: String, key_settings: KeySettings) {
         self.storage.insert(key, (value, key_settings));
     }
 }
