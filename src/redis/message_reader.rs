@@ -1,20 +1,20 @@
-use anyhow::Error;
 use mio::net::TcpStream;
 use std::io::{BufRead, BufReader, Read};
 use std::str::FromStr;
+use thiserror::Error;
 
 pub trait MessageReader: Read {
-    fn read_message(&self) -> Result<Vec<Option<String>>, Error>;
+    fn read_message(&self) -> Result<Vec<Option<String>>, anyhow::Error>;
 }
 
 impl MessageReader for TcpStream {
-    fn read_message(&self) -> Result<Vec<Option<String>>, Error> {
+    fn read_message(&self) -> Result<Vec<Option<String>>, anyhow::Error> {
         let reader = BufReader::with_capacity(10, self);
-        read_message(reader)
+        read_message(reader).map_err(|e| e.into())
     }
 }
 
-fn read_message(reader: impl BufRead) -> Result<Vec<Option<String>>, Error> {
+fn read_message(reader: impl BufRead) -> Result<Vec<Option<String>>, MessageReaderError> {
     let mut lines = Vec::new();
     let mut result_size = 1;
     let mut previous_marker = None;
@@ -34,7 +34,7 @@ fn read_message(reader: impl BufRead) -> Result<Vec<Option<String>>, Error> {
                 }
                 RespType::Integer(s) => lines.push(Some(s)),
                 RespType::SimpleString(s) => lines.push(Some(s)),
-                _ => return Err(Error::msg("Unexpected RESP data type"))
+                _ => return Err(MessageReaderError::UnknownDataType)
             }
             continue;
         }
@@ -48,7 +48,7 @@ fn read_message(reader: impl BufRead) -> Result<Vec<Option<String>>, Error> {
                 Err(e) => return Err(e.into()),
                 Ok(line) => {
                     if line.len() != size as usize {
-                        return Err(Error::msg("Invalid bulk string length"));
+                        return Err(MessageReaderError::InvalidBulkStringFormat);
                     }
                     lines.push(Some(line));
                     previous_marker = None;
@@ -67,7 +67,7 @@ fn read_message(reader: impl BufRead) -> Result<Vec<Option<String>>, Error> {
             }
             RespType::Integer(s) => lines.push(Some(s)),
             RespType::SimpleString(s) => lines.push(Some(s)),
-            _ => return Err(Error::msg("Unexpected RESP data type"))
+            _ => return Err(MessageReaderError::UnknownDataType)
         }
     }
     Ok(lines)
@@ -82,7 +82,7 @@ enum RespType {
 }
 
 impl FromStr for RespType {
-    type Err = Error;
+    type Err = MessageReaderError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars();
@@ -90,20 +90,31 @@ impl FromStr for RespType {
         match chars.next() {
             Some('+') => Ok(RespType::SimpleString(chars.as_str().to_string())),
             Some('$') => {
-                let size = chars.as_str().parse::<i64>()?;
+                let size = chars.as_str().parse::<i64>().map_err(|_| MessageReaderError::InvalidBulkStringFormat)?;
                 Ok(RespType::BulkString(size))
             }
             Some('-') => Ok(RespType::Error),
             Some(':') => Ok(RespType::Integer(chars.as_str().to_string())),
             Some('*') => {
-                let size = chars.as_str().parse::<usize>()?;
+                let size = chars.as_str().parse::<usize>().map_err(|_| MessageReaderError::InvalidArrayFormat)?;
                 Ok(RespType::Array(size))
             }
-            _ => Err(Error::msg("Unknown RESP data type"))
+            _ => Err(MessageReaderError::UnknownDataType)
         }
     }
 }
 
+#[derive(Debug, Error)]
+pub enum MessageReaderError {
+    #[error("connection error")]
+    Io(#[from] std::io::Error),
+    #[error("invalid RESP bulk string format")]
+    InvalidBulkStringFormat,
+    #[error("invalid RESP array format")]
+    InvalidArrayFormat,
+    #[error("unknown RESP data type")]
+    UnknownDataType,
+}
 #[cfg(test)]
 mod tests {
     use crate::redis::message_reader::read_message;
