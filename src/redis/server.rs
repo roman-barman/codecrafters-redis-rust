@@ -56,10 +56,7 @@ impl Server {
                         connections.insert(token, stream);
                     }
                     token => {
-                        println!("start");
                         let stream = connections.get_mut(&token).unwrap();
-                        println!("is_readable: {}", event.is_readable());
-                        println!("is_writable: {}", event.is_writable());
                         if !event.is_readable() || !event.is_writable() {
                             continue;
                         }
@@ -75,7 +72,6 @@ impl Server {
     }
 
     fn handle_request(&mut self, stream: &mut TcpStream) -> bool {
-        println!("handle");
         let request = stream.read_message();
         let request = match request {
             Ok(request) => request,
@@ -102,42 +98,36 @@ impl Server {
         let command = request.get(0).unwrap().as_ref().unwrap().to_lowercase();
         let command = command.as_str();
         let result = match command {
-            "ping" => stream.write_simple_string(self.ping().as_str()),
+            "ping" => Ok(RespResponse::SimpleString(self.ping())),
             "echo" => {
                 if request.len() != 2 {
-                    stream.write_error("Wrong number of arguments")
+                    Ok(RespResponse::Error("Wrong number of arguments".to_string()))
                 } else {
-                    stream.write_bulk_sting(Some(self.echo(request.get(1).unwrap().as_ref().unwrap()).as_str()))
+                    Ok(RespResponse::BulkString(Some(self.echo(request.get(1).unwrap().as_ref().unwrap()))))
                 }
             }
             "get" => {
                 if request.len() != 2 {
-                    stream.write_error("Wrong number of arguments")
+                    Ok(RespResponse::Error("Wrong number of arguments".to_string()))
                 } else {
                     let result = self.get_value(request.get(1).unwrap().as_ref().unwrap());
-                    stream.write_bulk_sting(result)
+                    Ok(RespResponse::BulkString(result.map(|x| x.to_string())))
                 }
             }
             "set" => {
-                println!("0");
                 if request.len() < 3 {
-                    stream.write_error("Wrong number of arguments")
+                    Ok(RespResponse::Error("Wrong number of arguments".to_string()))
                 } else {
-                    println!("a");
                     let key = request.get(1).unwrap().as_ref().unwrap();
                     let value = request.get(2).unwrap().as_ref().unwrap();
-                    println!("b");
                     let settings = match request.get(3) {
                         None => Ok(KeySettings::default()),
                         Some(value) => {
                             let arg_name = value.as_ref().unwrap().to_lowercase();
                             if "px" != arg_name {
-                                println!("c");
                                 Err("Unknown argument name")
                             } else {
-                                println!("d");
                                 let arg_value = request.get(4);
-                                println!("e");
                                 if arg_value.is_none() {
                                     Err("Wrong number of arguments")
                                 } else {
@@ -156,25 +146,28 @@ impl Server {
                             let result = self.set_key_value(
                                 key.clone(),
                                 value.clone(), settings);
-                            stream.write_bulk_sting(Some(result.as_str()))
+                            Ok(RespResponse::BulkString(Some(result)))
                         }
-                        Err(e) => stream.write_error(e)
+                        Err(e) => Ok(RespResponse::Error(e.to_string()))
                     }
                 }
             }
             "config" => {
                 if request.len() != 3 {
-                    stream.write_error("Wrong number of arguments")
+                    Ok(RespResponse::Error("Wrong number of arguments".to_string()))
                 } else {
                     if request.get(1).unwrap().as_ref().unwrap().to_lowercase() != "get" {
-                        stream.write_error("Unknown argument name")
+                        Ok(RespResponse::Error("Unknown argument name".to_string()))
                     } else {
                         let result = self.get_config(
                             request.get(2).unwrap().as_ref().unwrap(), &self.config);
 
                         match result {
-                            Ok((key, value)) => stream.write_array(vec![Some(key), value]),
-                            Err(e) => stream.write_error(e.to_string().as_str())
+                            Ok((key, value)) => Ok(RespResponse::Array(
+                                vec![
+                                    Some(key.to_string()),
+                                    value.map(|x| x.to_string())])),
+                            Err(e) => Ok(RespResponse::Error(e.to_string()))
                         }
                     }
                 }
@@ -183,7 +176,20 @@ impl Server {
         };
 
         match result {
-            Ok(_) => true,
+            Ok(response) => match response {
+                RespResponse::BulkString(s) => stream
+                    .write_bulk_sting(&s)
+                    .map_or(false, |_| true),
+                RespResponse::SimpleString(s) => stream
+                    .write_simple_string(s)
+                    .map_or(false, |_| true),
+                RespResponse::Error(s) => stream
+                    .write_error(s)
+                    .map_or(false, |_| true),
+                RespResponse::Array(s) => stream
+                    .write_array(&s)
+                    .map_or(false, |_| true),
+            },
             Err(e) => {
                 println!("error: {}", e);
                 false
@@ -196,4 +202,11 @@ impl GetStorage for Server {
     fn get_storage(&mut self) -> &mut dyn Storage {
         &mut self.storage
     }
+}
+
+enum RespResponse {
+    SimpleString(String),
+    BulkString(Option<String>),
+    Array(Vec<Option<String>>),
+    Error(String),
 }
