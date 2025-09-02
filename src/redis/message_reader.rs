@@ -13,7 +13,7 @@ impl MessageReader for TcpStream {
         let reader = BufReader::with_capacity(10, self);
         match read_message(reader) {
             Ok(request) => Ok(Request::new(request)?),
-            Err(e) => Err(e.into())
+            Err(e) => Err(e.into()),
         }
     }
 }
@@ -38,7 +38,7 @@ fn read_message(reader: impl BufRead) -> Result<Vec<Option<String>>, MessageRead
                 }
                 RespType::Integer(s) => lines.push(Some(s)),
                 RespType::SimpleString(s) => lines.push(Some(s)),
-                _ => return Err(MessageReaderError::UnknownDataType)
+                _ => return Err(MessageReaderError::UnknownDataType),
             }
             continue;
         }
@@ -71,7 +71,7 @@ fn read_message(reader: impl BufRead) -> Result<Vec<Option<String>>, MessageRead
             }
             RespType::Integer(s) => lines.push(Some(s)),
             RespType::SimpleString(s) => lines.push(Some(s)),
-            _ => return Err(MessageReaderError::UnknownDataType)
+            _ => return Err(MessageReaderError::UnknownDataType),
         }
     }
     Ok(lines)
@@ -94,16 +94,22 @@ impl FromStr for RespType {
         match chars.next() {
             Some('+') => Ok(RespType::SimpleString(chars.as_str().to_string())),
             Some('$') => {
-                let size = chars.as_str().parse::<i64>().map_err(|_| MessageReaderError::InvalidBulkStringFormat)?;
+                let size = chars
+                    .as_str()
+                    .parse::<i64>()
+                    .map_err(|_| MessageReaderError::InvalidBulkStringFormat)?;
                 Ok(RespType::BulkString(size))
             }
             Some('-') => Ok(RespType::Error),
             Some(':') => Ok(RespType::Integer(chars.as_str().to_string())),
             Some('*') => {
-                let size = chars.as_str().parse::<usize>().map_err(|_| MessageReaderError::InvalidArrayFormat)?;
+                let size = chars
+                    .as_str()
+                    .parse::<usize>()
+                    .map_err(|_| MessageReaderError::InvalidArrayFormat)?;
                 Ok(RespType::Array(size))
             }
-            _ => Err(MessageReaderError::UnknownDataType)
+            _ => Err(MessageReaderError::UnknownDataType),
         }
     }
 }
@@ -128,48 +134,52 @@ mod tests {
     fn test_read_integer() {
         assert_eq!(
             read_message(io::Cursor::new(b":1000\r\n")).unwrap(),
-            vec![Some("1000".to_string())]);
+            vec![Some("1000".to_string())]
+        );
     }
 
     #[test]
     fn test_read_simple_string() {
         assert_eq!(
             read_message(io::Cursor::new(b"+OK\r\n")).unwrap(),
-            vec![Some("OK".to_string())]);
+            vec![Some("OK".to_string())]
+        );
     }
 
     #[test]
     fn test_read_bulk_string() {
         assert_eq!(
             read_message(io::Cursor::new(b"$5\r\nhello\r\n")).unwrap(),
-            vec![Some("hello".to_string())]);
+            vec![Some("hello".to_string())]
+        );
     }
 
     #[test]
     fn test_read_empty_bulk_string() {
         assert_eq!(
             read_message(io::Cursor::new(b"$0\r\n\r\n")).unwrap(),
-            vec![Some("".to_string())]);
+            vec![Some("".to_string())]
+        );
     }
 
     #[test]
     fn test_read_null_bulk_string() {
         assert_eq!(
             read_message(io::Cursor::new(b"$-1\r\n\r\n")).unwrap(),
-            vec![None]);
+            vec![None]
+        );
     }
 
     #[test]
     fn test_read_array() {
         assert_eq!(
             read_message(io::Cursor::new(b"*2\r\n$4\r\nECHO\r\n$5\r\nmango\r\n")).unwrap(),
-            vec![Some("ECHO".to_string()), Some("mango".to_string())]);
+            vec![Some("ECHO".to_string()), Some("mango".to_string())]
+        );
     }
 
     #[test]
     fn test_read_empty_stream() {
-        assert_eq!(
-            read_message(io::Cursor::new(b"")).unwrap(),
-            vec![]);
+        assert_eq!(read_message(io::Cursor::new(b"")).unwrap(), vec![]);
     }
 }

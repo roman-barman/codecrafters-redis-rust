@@ -39,7 +39,7 @@ impl From<MessageReaderError> for RedisError {
     fn from(value: MessageReaderError) -> Self {
         match value {
             MessageReaderError::Io(e) => RedisError::ConnectionError(e.to_string()),
-            _ => RedisError::ClientError(value.to_string())
+            _ => RedisError::ClientError(value.to_string()),
         }
     }
 }
@@ -47,8 +47,12 @@ impl From<MessageReaderError> for RedisError {
 impl From<RequestError> for RedisError {
     fn from(value: RequestError) -> Self {
         match value {
-            RequestError::EmptyRequest => RedisError::ConnectionError(RequestError::EmptyRequest.to_string()),
-            RequestError::InvalidRequest => RedisError::ClientError(RequestError::InvalidRequest.to_string()),
+            RequestError::EmptyRequest => {
+                RedisError::ConnectionError(RequestError::EmptyRequest.to_string())
+            }
+            RequestError::InvalidRequest => {
+                RedisError::ClientError(RequestError::InvalidRequest.to_string())
+            }
         }
     }
 }
@@ -56,7 +60,9 @@ impl From<RequestError> for RedisError {
 impl From<GetConfigError> for RedisError {
     fn from(value: GetConfigError) -> Self {
         match value {
-            GetConfigError::UnknownParameter(parameter) => RedisError::ClientError(GetConfigError::UnknownParameter(parameter).to_string())
+            GetConfigError::UnknownParameter(parameter) => {
+                RedisError::ClientError(GetConfigError::UnknownParameter(parameter).to_string())
+            }
         }
     }
 }

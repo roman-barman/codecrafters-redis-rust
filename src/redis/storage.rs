@@ -13,7 +13,7 @@ pub struct RedisStorage {
 impl RedisStorage {
     pub fn new() -> Self {
         Self {
-            storage: HashMap::new()
+            storage: HashMap::new(),
         }
     }
 }
@@ -44,16 +44,14 @@ pub struct KeySettings {
 
 impl Default for KeySettings {
     fn default() -> Self {
-        Self {
-            ttl: None
-        }
+        Self { ttl: None }
     }
 }
 
 impl KeySettings {
     pub fn new(expiry: u64) -> Self {
         Self {
-            ttl: Some(Local::now() + TimeDelta::try_milliseconds(expiry as i64).unwrap())
+            ttl: Some(Local::now() + TimeDelta::try_milliseconds(expiry as i64).unwrap()),
         }
     }
 }

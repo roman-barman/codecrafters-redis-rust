@@ -7,7 +7,11 @@ const DIR: &str = "dir";
 const DB_FILE_NAME: &str = "dbfilename";
 
 pub trait GetConfigHandler<'a> {
-    fn get_config(&self, parameter: &str, config: &'a Config) -> Result<(&'static str, Option<&'a str>), Error> {
+    fn get_config(
+        &self,
+        parameter: &str,
+        config: &'a Config,
+    ) -> Result<(&'static str, Option<&'a str>), Error> {
         if parameter.eq_ignore_ascii_case(DIR) {
             Ok((DIR, config.dir.as_ref().map(|d| d.as_str())))
         } else if parameter.eq_ignore_ascii_case(DB_FILE_NAME) {

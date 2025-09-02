@@ -13,7 +13,9 @@ pub trait MessageWriter: Write {
     }
     fn write_bulk_sting(&mut self, message: &Option<impl AsRef<str>>) -> Result<(), Error> {
         match message {
-            Some(message) => self.write(format!("${}\r\n{}\r\n", message.as_ref().len(), message.as_ref()).as_bytes())?,
+            Some(message) => self.write(
+                format!("${}\r\n{}\r\n", message.as_ref().len(), message.as_ref()).as_bytes(),
+            )?,
             None => self.write(b"$-1\r\n")?,
         };
         Ok(())

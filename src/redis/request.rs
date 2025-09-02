@@ -12,7 +12,9 @@ impl Request {
         if value.iter().any(|x| x.is_none()) {
             return Err(RequestError::InvalidRequest);
         }
-        Ok(Self { value: value.into_iter().map(|x| x.unwrap()).collect() })
+        Ok(Self {
+            value: value.into_iter().map(|x| x.unwrap()).collect(),
+        })
     }
 
     pub fn get(&self, index: usize) -> Option<&String> {

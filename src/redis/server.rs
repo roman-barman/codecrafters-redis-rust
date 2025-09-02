@@ -25,7 +25,10 @@ pub struct Server {
 
 impl Server {
     pub fn new(config: Config) -> Self {
-        Self { storage: RedisStorage::new(), config }
+        Self {
+            storage: RedisStorage::new(),
+            config,
+        }
     }
 
     pub fn run(&mut self) {
@@ -91,10 +94,8 @@ impl Server {
             Err(e) => {
                 println!("{}", e);
                 match e {
-                    RedisError::ClientError(e) => {
-                        Ok(stream.write_error(&e)?)
-                    }
-                    _ => Err(e)
+                    RedisError::ClientError(e) => Ok(stream.write_error(&e)?),
+                    _ => Err(e),
                 }
             }
         }
@@ -108,14 +109,20 @@ impl Server {
             "ping" => Ok(RespResponse::SimpleString(self.ping())),
             "echo" => {
                 if request.len() != 2 {
-                    Err(RedisError::ClientError("echo: wrong number of arguments".to_string()))
+                    Err(RedisError::ClientError(
+                        "echo: wrong number of arguments".to_string(),
+                    ))
                 } else {
-                    Ok(RespResponse::BulkString(Some(self.echo(request.get(1).unwrap()))))
+                    Ok(RespResponse::BulkString(Some(
+                        self.echo(request.get(1).unwrap()),
+                    )))
                 }
             }
             "get" => {
                 if request.len() != 2 {
-                    Err(RedisError::ClientError("get: wrong number of arguments".to_string()))
+                    Err(RedisError::ClientError(
+                        "get: wrong number of arguments".to_string(),
+                    ))
                 } else {
                     let result = self.get_value(request.get(1).unwrap());
                     Ok(RespResponse::BulkString(result.map(|x| x.to_string())))
@@ -123,7 +130,9 @@ impl Server {
             }
             "set" => {
                 if request.len() < 3 {
-                    Err(RedisError::ClientError("set: wrong number of arguments".to_string()))
+                    Err(RedisError::ClientError(
+                        "set: wrong number of arguments".to_string(),
+                    ))
                 } else {
                     let key = request.get(1).unwrap();
                     let value = request.get(2).unwrap();
@@ -132,47 +141,60 @@ impl Server {
                         Some(value) => {
                             let arg_name = value.to_lowercase();
                             if "px" != arg_name {
-                                Err(RedisError::ClientError(format!("set: unknown argument name '{}'", value)))
+                                Err(RedisError::ClientError(format!(
+                                    "set: unknown argument name '{}'",
+                                    value
+                                )))
                             } else {
                                 let arg_value = request.get(4);
                                 if arg_value.is_none() {
-                                    Err(RedisError::ClientError("set: wrong number of arguments".to_string()))
+                                    Err(RedisError::ClientError(
+                                        "set: wrong number of arguments".to_string(),
+                                    ))
                                 } else {
                                     let ttl = arg_value.unwrap().parse::<u64>();
                                     match ttl {
                                         Ok(ttl) => Ok(KeySettings::new(ttl)),
-                                        Err(_) => Err(RedisError::ClientError("set: invalid px value".to_string()))
+                                        Err(_) => Err(RedisError::ClientError(
+                                            "set: invalid px value".to_string(),
+                                        )),
                                     }
                                 }
                             }
                         }
                     }?;
 
-                    let result = self.set_key_value(
-                        key.clone(),
-                        value.clone(), settings);
+                    let result = self.set_key_value(key.clone(), value.clone(), settings);
                     Ok(RespResponse::BulkString(Some(result)))
                 }
             }
             "config" => {
                 if request.len() != 3 {
-                    Err(RedisError::ClientError("config: wrong number of arguments".to_string()))
+                    Err(RedisError::ClientError(
+                        "config: wrong number of arguments".to_string(),
+                    ))
                 } else {
                     let arg = request.get(1).unwrap();
                     if arg.to_lowercase() != "get" {
-                        Err(RedisError::ClientError(format!("get: unknown argument name '{}'", arg)))
+                        Err(RedisError::ClientError(format!(
+                            "get: unknown argument name '{}'",
+                            arg
+                        )))
                     } else {
-                        let (key, value) = self.get_config(
-                            request.get(2).unwrap(), &self.config)?;
+                        let (key, value) =
+                            self.get_config(request.get(2).unwrap(), &self.config)?;
 
-                        Ok(RespResponse::Array(
-                            vec![
-                                Some(key.to_string()),
-                                value.map(|x| x.to_string())]))
+                        Ok(RespResponse::Array(vec![
+                            Some(key.to_string()),
+                            value.map(|x| x.to_string()),
+                        ]))
                     }
                 }
             }
-            _ => Err(RedisError::ClientError(format!("Unknown command '{}'", command))),
+            _ => Err(RedisError::ClientError(format!(
+                "Unknown command '{}'",
+                command
+            ))),
         }
     }
 }
