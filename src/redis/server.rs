@@ -5,9 +5,9 @@ use crate::redis::get_value_handler::GetValueHandler;
 use crate::redis::message_reader::MessageReader;
 use crate::redis::message_writer::MessageWriter;
 use crate::redis::ping_handler::PingHandler;
+use crate::redis::redis_error::RedisError;
 use crate::redis::set_key_value_handler::SetKeyValueHandler;
 use crate::redis::storage::{KeySettings, RedisStorage, Storage};
-use anyhow::Error;
 use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
@@ -61,9 +61,18 @@ impl Server {
                             continue;
                         }
 
-                        if !self.handle_request(stream) {
-                            poll.registry().deregister(stream).unwrap();
-                            connections.remove(&token);
+                        match self.handle(stream) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                println!("{}", e);
+                                match e {
+                                    RedisError::ClientError(_) => {}
+                                    _ => {
+                                        poll.registry().deregister(stream).unwrap();
+                                        connections.remove(&token);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -71,129 +80,99 @@ impl Server {
         }
     }
 
-    fn handle_request(&mut self, stream: &mut TcpStream) -> bool {
-        let request = stream.read_message();
-        let request = match request {
-            Ok(request) => request,
+    fn handle(&mut self, stream: &mut TcpStream) -> Result<(), RedisError> {
+        let result = self.handle_request(stream);
+        match result {
+            Ok(response) => match response {
+                RespResponse::SimpleString(value) => Ok(stream.write_simple_string(value)?),
+                RespResponse::BulkString(value) => Ok(stream.write_bulk_sting(&value)?),
+                RespResponse::Array(value) => Ok(stream.write_array(&value)?),
+            },
             Err(e) => {
-                println!("error: {}", e);
-                return false;
-            }
-        };
-
-        if request.is_empty() {
-            return false;
-        }
-
-        if request.iter().any(|x| x.is_none()) {
-            return match stream.write_error("Invalid argument type") {
-                Ok(_) => true,
-                Err(e) => {
-                    println!("error: {}", e);
-                    false
+                println!("{}", e);
+                match e {
+                    RedisError::ClientError(e) => {
+                        Ok(stream.write_error(&e)?)
+                    }
+                    _ => Err(e)
                 }
-            };
+            }
         }
+    }
 
-        let command = request.get(0).unwrap().as_ref().unwrap().to_lowercase();
-        let command = command.as_str();
-        let result = match command {
+    fn handle_request(&mut self, stream: &mut TcpStream) -> Result<RespResponse, RedisError> {
+        let request = stream.read_message()?;
+        let binding = request.get(0).unwrap().to_lowercase();
+        let command = binding.as_str();
+        match command {
             "ping" => Ok(RespResponse::SimpleString(self.ping())),
             "echo" => {
                 if request.len() != 2 {
-                    Ok(RespResponse::Error("Wrong number of arguments".to_string()))
+                    Err(RedisError::ClientError("echo: wrong number of arguments".to_string()))
                 } else {
-                    Ok(RespResponse::BulkString(Some(self.echo(request.get(1).unwrap().as_ref().unwrap()))))
+                    Ok(RespResponse::BulkString(Some(self.echo(request.get(1).unwrap()))))
                 }
             }
             "get" => {
                 if request.len() != 2 {
-                    Ok(RespResponse::Error("Wrong number of arguments".to_string()))
+                    Err(RedisError::ClientError("get: wrong number of arguments".to_string()))
                 } else {
-                    let result = self.get_value(request.get(1).unwrap().as_ref().unwrap());
+                    let result = self.get_value(request.get(1).unwrap());
                     Ok(RespResponse::BulkString(result.map(|x| x.to_string())))
                 }
             }
             "set" => {
                 if request.len() < 3 {
-                    Ok(RespResponse::Error("Wrong number of arguments".to_string()))
+                    Err(RedisError::ClientError("set: wrong number of arguments".to_string()))
                 } else {
-                    let key = request.get(1).unwrap().as_ref().unwrap();
-                    let value = request.get(2).unwrap().as_ref().unwrap();
+                    let key = request.get(1).unwrap();
+                    let value = request.get(2).unwrap();
                     let settings = match request.get(3) {
                         None => Ok(KeySettings::default()),
                         Some(value) => {
-                            let arg_name = value.as_ref().unwrap().to_lowercase();
+                            let arg_name = value.to_lowercase();
                             if "px" != arg_name {
-                                Err("Unknown argument name")
+                                Err(RedisError::ClientError(format!("set: unknown argument name '{}'", value)))
                             } else {
                                 let arg_value = request.get(4);
                                 if arg_value.is_none() {
-                                    Err("Wrong number of arguments")
+                                    Err(RedisError::ClientError("set: wrong number of arguments".to_string()))
                                 } else {
-                                    let ttl = arg_value.unwrap().as_ref().unwrap().parse::<u64>();
+                                    let ttl = arg_value.unwrap().parse::<u64>();
                                     match ttl {
                                         Ok(ttl) => Ok(KeySettings::new(ttl)),
-                                        Err(_) => Err("Invalid argument value")
+                                        Err(_) => Err(RedisError::ClientError("set: invalid px value".to_string()))
                                     }
                                 }
                             }
                         }
-                    };
+                    }?;
 
-                    match settings {
-                        Ok(settings) => {
-                            let result = self.set_key_value(
-                                key.clone(),
-                                value.clone(), settings);
-                            Ok(RespResponse::BulkString(Some(result)))
-                        }
-                        Err(e) => Ok(RespResponse::Error(e.to_string()))
-                    }
+                    let result = self.set_key_value(
+                        key.clone(),
+                        value.clone(), settings);
+                    Ok(RespResponse::BulkString(Some(result)))
                 }
             }
             "config" => {
                 if request.len() != 3 {
-                    Ok(RespResponse::Error("Wrong number of arguments".to_string()))
+                    Err(RedisError::ClientError("config: wrong number of arguments".to_string()))
                 } else {
-                    if request.get(1).unwrap().as_ref().unwrap().to_lowercase() != "get" {
-                        Ok(RespResponse::Error("Unknown argument name".to_string()))
+                    let arg = request.get(1).unwrap();
+                    if arg.to_lowercase() != "get" {
+                        Err(RedisError::ClientError(format!("get: unknown argument name '{}'", arg)))
                     } else {
-                        let result = self.get_config(
-                            request.get(2).unwrap().as_ref().unwrap(), &self.config);
+                        let (key, value) = self.get_config(
+                            request.get(2).unwrap(), &self.config)?;
 
-                        match result {
-                            Ok((key, value)) => Ok(RespResponse::Array(
-                                vec![
-                                    Some(key.to_string()),
-                                    value.map(|x| x.to_string())])),
-                            Err(e) => Ok(RespResponse::Error(e.to_string()))
-                        }
+                        Ok(RespResponse::Array(
+                            vec![
+                                Some(key.to_string()),
+                                value.map(|x| x.to_string())]))
                     }
                 }
             }
-            _ => Err(Error::msg("Unknown command")),
-        };
-
-        match result {
-            Ok(response) => match response {
-                RespResponse::BulkString(s) => stream
-                    .write_bulk_sting(&s)
-                    .map_or(false, |_| true),
-                RespResponse::SimpleString(s) => stream
-                    .write_simple_string(s)
-                    .map_or(false, |_| true),
-                RespResponse::Error(s) => stream
-                    .write_error(s)
-                    .map_or(false, |_| true),
-                RespResponse::Array(s) => stream
-                    .write_array(&s)
-                    .map_or(false, |_| true),
-            },
-            Err(e) => {
-                println!("error: {}", e);
-                false
-            }
+            _ => Err(RedisError::ClientError(format!("Unknown command '{}'", command))),
         }
     }
 }
@@ -208,5 +187,4 @@ enum RespResponse {
     SimpleString(String),
     BulkString(Option<String>),
     Array(Vec<Option<String>>),
-    Error(String),
 }

@@ -1,16 +1,20 @@
+use crate::redis::request::Request;
 use mio::net::TcpStream;
 use std::io::{BufRead, BufReader, Read};
 use std::str::FromStr;
 use thiserror::Error;
 
 pub trait MessageReader: Read {
-    fn read_message(&self) -> Result<Vec<Option<String>>, anyhow::Error>;
+    fn read_message(&self) -> Result<Request, anyhow::Error>;
 }
 
 impl MessageReader for TcpStream {
-    fn read_message(&self) -> Result<Vec<Option<String>>, anyhow::Error> {
+    fn read_message(&self) -> Result<Request, anyhow::Error> {
         let reader = BufReader::with_capacity(10, self);
-        read_message(reader).map_err(|e| e.into())
+        match read_message(reader) {
+            Ok(request) => Ok(Request::new(request)?),
+            Err(e) => Err(e.into())
+        }
     }
 }
 
