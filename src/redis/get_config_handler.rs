@@ -13,9 +13,9 @@ pub trait GetConfigHandler<'a> {
         config: &'a Config,
     ) -> Result<(&'static str, Option<&'a str>), Error> {
         if parameter.eq_ignore_ascii_case(DIR) {
-            Ok((DIR, config.dir.as_ref().map(|d| d.as_str())))
+            Ok((DIR, config.dir.as_deref()))
         } else if parameter.eq_ignore_ascii_case(DB_FILE_NAME) {
-            Ok((DB_FILE_NAME, config.dbfilename.as_ref().map(|d| d.as_str())))
+            Ok((DB_FILE_NAME, config.dbfilename.as_deref()))
         } else {
             Err(GetConfigError::UnknownParameter(parameter.to_string()).into())
         }

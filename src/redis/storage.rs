@@ -38,14 +38,9 @@ impl Storage for RedisStorage {
     }
 }
 
+#[derive(Default)]
 pub struct KeySettings {
     ttl: Option<DateTime<Local>>,
-}
-
-impl Default for KeySettings {
-    fn default() -> Self {
-        Self { ttl: None }
-    }
 }
 
 impl KeySettings {

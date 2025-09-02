@@ -69,7 +69,7 @@ impl Server {
                             Err(e) => {
                                 println!("{}", e);
                                 match e {
-                                    RedisError::ClientError(_) => {}
+                                    RedisError::Client(_) => {}
                                     _ => {
                                         poll.registry().deregister(stream).unwrap();
                                         connections.remove(&token);
@@ -94,7 +94,7 @@ impl Server {
             Err(e) => {
                 println!("{}", e);
                 match e {
-                    RedisError::ClientError(e) => Ok(stream.write_error(&e)?),
+                    RedisError::Client(e) => Ok(stream.write_error(&e)?),
                     _ => Err(e),
                 }
             }
@@ -109,7 +109,7 @@ impl Server {
             "ping" => Ok(RespResponse::SimpleString(self.ping())),
             "echo" => {
                 if request.len() != 2 {
-                    Err(RedisError::ClientError(
+                    Err(RedisError::Client(
                         "echo: wrong number of arguments".to_string(),
                     ))
                 } else {
@@ -120,7 +120,7 @@ impl Server {
             }
             "get" => {
                 if request.len() != 2 {
-                    Err(RedisError::ClientError(
+                    Err(RedisError::Client(
                         "get: wrong number of arguments".to_string(),
                     ))
                 } else {
@@ -130,7 +130,7 @@ impl Server {
             }
             "set" => {
                 if request.len() < 3 {
-                    Err(RedisError::ClientError(
+                    Err(RedisError::Client(
                         "set: wrong number of arguments".to_string(),
                     ))
                 } else {
@@ -141,21 +141,21 @@ impl Server {
                         Some(value) => {
                             let arg_name = value.to_lowercase();
                             if "px" != arg_name {
-                                Err(RedisError::ClientError(format!(
+                                Err(RedisError::Client(format!(
                                     "set: unknown argument name '{}'",
                                     value
                                 )))
                             } else {
                                 let arg_value = request.get(4);
                                 if arg_value.is_none() {
-                                    Err(RedisError::ClientError(
+                                    Err(RedisError::Client(
                                         "set: wrong number of arguments".to_string(),
                                     ))
                                 } else {
                                     let ttl = arg_value.unwrap().parse::<u64>();
                                     match ttl {
                                         Ok(ttl) => Ok(KeySettings::new(ttl)),
-                                        Err(_) => Err(RedisError::ClientError(
+                                        Err(_) => Err(RedisError::Client(
                                             "set: invalid px value".to_string(),
                                         )),
                                     }
@@ -170,13 +170,13 @@ impl Server {
             }
             "config" => {
                 if request.len() != 3 {
-                    Err(RedisError::ClientError(
+                    Err(RedisError::Client(
                         "config: wrong number of arguments".to_string(),
                     ))
                 } else {
                     let arg = request.get(1).unwrap();
                     if arg.to_lowercase() != "get" {
-                        Err(RedisError::ClientError(format!(
+                        Err(RedisError::Client(format!(
                             "get: unknown argument name '{}'",
                             arg
                         )))
@@ -191,10 +191,7 @@ impl Server {
                     }
                 }
             }
-            _ => Err(RedisError::ClientError(format!(
-                "Unknown command '{}'",
-                command
-            ))),
+            _ => Err(RedisError::Client(format!("Unknown command '{}'", command))),
         }
     }
 }

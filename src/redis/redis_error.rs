@@ -6,11 +6,11 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum RedisError {
     #[error("{0}")]
-    ServerError(String),
+    Server(String),
     #[error("{0}")]
-    ClientError(String),
+    Client(String),
     #[error("{0}")]
-    ConnectionError(String),
+    Connection(String),
 }
 
 impl From<anyhow::Error> for RedisError {
@@ -28,18 +28,18 @@ impl From<anyhow::Error> for RedisError {
         }
 
         if value.is::<std::io::Error>() {
-            return RedisError::ConnectionError(value.to_string());
+            return RedisError::Connection(value.to_string());
         }
 
-        RedisError::ServerError(value.to_string())
+        RedisError::Server(value.to_string())
     }
 }
 
 impl From<MessageReaderError> for RedisError {
     fn from(value: MessageReaderError) -> Self {
         match value {
-            MessageReaderError::Io(e) => RedisError::ConnectionError(e.to_string()),
-            _ => RedisError::ClientError(value.to_string()),
+            MessageReaderError::Io(e) => RedisError::Connection(e.to_string()),
+            _ => RedisError::Client(value.to_string()),
         }
     }
 }
@@ -48,10 +48,10 @@ impl From<RequestError> for RedisError {
     fn from(value: RequestError) -> Self {
         match value {
             RequestError::EmptyRequest => {
-                RedisError::ConnectionError(RequestError::EmptyRequest.to_string())
+                RedisError::Connection(RequestError::EmptyRequest.to_string())
             }
             RequestError::InvalidRequest => {
-                RedisError::ClientError(RequestError::InvalidRequest.to_string())
+                RedisError::Client(RequestError::InvalidRequest.to_string())
             }
         }
     }
@@ -61,7 +61,7 @@ impl From<GetConfigError> for RedisError {
     fn from(value: GetConfigError) -> Self {
         match value {
             GetConfigError::UnknownParameter(parameter) => {
-                RedisError::ClientError(GetConfigError::UnknownParameter(parameter).to_string())
+                RedisError::Client(GetConfigError::UnknownParameter(parameter).to_string())
             }
         }
     }
