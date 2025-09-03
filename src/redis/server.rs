@@ -1,7 +1,5 @@
 use crate::config::Config;
-use crate::redis::handlers::{
-    EchoHandler, GetConfigHandler, GetValueHandler, PingHandler, SetKeyValueHandler,
-};
+use crate::redis::handlers::{EchoHandler, GetConfigHandler, GetValueHandler, PingHandler, SetKeyValueHandler};
 use crate::redis::message_reader::MessageReader;
 use crate::redis::message_writer::MessageWriter;
 use crate::redis::redis_error::RedisError;
@@ -107,16 +105,7 @@ impl Server {
         match command {
             "ping" => Ok(self.ping()),
             "echo" => self.echo(&request).map_err(|e| e.into()),
-            "get" => {
-                if request.len() != 2 {
-                    Err(RedisError::Client(
-                        "get: wrong number of arguments".to_string(),
-                    ))
-                } else {
-                    let result = self.get_value(request.get(1).unwrap());
-                    Ok(Response::BulkString(result.map(|x| x.to_string())))
-                }
-            }
+            "get" => self.get_value(&request).map_err(|e| e.into()),
             "set" => {
                 if request.len() < 3 {
                     Err(RedisError::Client(

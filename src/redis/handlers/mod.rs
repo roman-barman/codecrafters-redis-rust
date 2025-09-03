@@ -6,6 +6,6 @@ mod set_key_value_handler;
 
 pub use echo_handler::{EchoHandler, EchoHandlerError};
 pub use get_config_handler::{GetConfigError, GetConfigHandler};
-pub use get_value_handler::GetValueHandler;
+pub use get_value_handler::{GetValueHandler, GetValueHandlerError};
 pub use ping_handler::PingHandler;
 pub use set_key_value_handler::SetKeyValueHandler;

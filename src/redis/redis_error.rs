@@ -1,4 +1,4 @@
-use crate::redis::handlers::{EchoHandlerError, GetConfigError};
+use crate::redis::handlers::{EchoHandlerError, GetConfigError, GetValueHandlerError};
 use crate::redis::message_reader::MessageReaderError;
 use crate::redis::request::RequestError;
 use thiserror::Error;
@@ -33,6 +33,10 @@ impl From<anyhow::Error> for RedisError {
 
         if value.is::<EchoHandlerError>() {
             return RedisError::from(value.downcast::<EchoHandlerError>().unwrap());
+        }
+
+        if value.is::<GetValueHandlerError>() {
+            return RedisError::from(value.downcast::<GetValueHandlerError>().unwrap());
         }
 
         RedisError::Server(value.to_string())
@@ -76,6 +80,16 @@ impl From<EchoHandlerError> for RedisError {
         match value {
             EchoHandlerError::WrongNumberOfArguments => {
                 RedisError::Client(EchoHandlerError::WrongNumberOfArguments.to_string())
+            }
+        }
+    }
+}
+
+impl From<GetValueHandlerError> for RedisError {
+    fn from(value: GetValueHandlerError) -> Self {
+        match value {
+            GetValueHandlerError::WrongNumberOfArguments => {
+                RedisError::Client(value.to_string())
             }
         }
     }
