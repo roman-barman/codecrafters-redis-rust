@@ -1,12 +1,10 @@
 use crate::config::Config;
-use crate::redis::echo_handler::EchoHandler;
-use crate::redis::get_config_handler::GetConfigHandler;
-use crate::redis::get_value_handler::GetValueHandler;
+use crate::redis::handlers::{
+    EchoHandler, GetConfigHandler, GetValueHandler, PingHandler, SetKeyValueHandler,
+};
 use crate::redis::message_reader::MessageReader;
 use crate::redis::message_writer::MessageWriter;
-use crate::redis::ping_handler::PingHandler;
 use crate::redis::redis_error::RedisError;
-use crate::redis::set_key_value_handler::SetKeyValueHandler;
 use crate::redis::storage::{KeySettings, RedisStorage, Storage};
 use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Token};

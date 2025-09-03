@@ -1,4 +1,4 @@
-use crate::redis::get_config_handler::GetConfigError;
+use crate::redis::handlers::GetConfigError;
 use crate::redis::message_reader::MessageReaderError;
 use crate::redis::request::RequestError;
 use thiserror::Error;
