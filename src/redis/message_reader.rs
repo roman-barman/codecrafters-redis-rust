@@ -1,20 +1,17 @@
-use crate::redis::request::Request;
+use crate::redis::request::{Request, RequestError};
 use mio::net::TcpStream;
 use std::io::{BufRead, BufReader, Read};
 use std::str::FromStr;
 use thiserror::Error;
 
 pub trait MessageReader: Read {
-    fn read_message(&self) -> Result<Request, anyhow::Error>;
+    fn read_message(&self) -> Result<Request, MessageReaderError>;
 }
 
 impl MessageReader for TcpStream {
-    fn read_message(&self) -> Result<Request, anyhow::Error> {
+    fn read_message(&self) -> Result<Request, MessageReaderError> {
         let reader = BufReader::with_capacity(10, self);
-        match read_message(reader) {
-            Ok(request) => Ok(Request::new(request)?),
-            Err(e) => Err(e.into()),
-        }
+        Ok(Request::new(read_message(reader)?)?)
     }
 }
 
@@ -118,6 +115,8 @@ impl FromStr for RespType {
 pub enum MessageReaderError {
     #[error("connection error")]
     Io(#[from] std::io::Error),
+    #[error("connection error")]
+    InvalidRequest(#[from] RequestError),
     #[error("invalid RESP bulk string format")]
     InvalidBulkStringFormat,
     #[error("invalid RESP array format")]

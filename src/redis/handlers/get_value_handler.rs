@@ -2,13 +2,12 @@ use crate::redis::request::Request;
 use crate::redis::response::Response;
 use crate::redis::server::GetStorage;
 use crate::redis::Server;
-use anyhow::Error;
 use thiserror::Error;
 
 pub trait GetValueHandler: GetStorage {
-    fn get_value(&mut self, request: &Request) -> Result<Response, Error> {
+    fn get_value(&mut self, request: &Request) -> Result<Response, GetValueHandlerError> {
         if request.len() != 2 {
-            Err(GetValueHandlerError::WrongNumberOfArguments.into())
+            Err(GetValueHandlerError::WrongNumberOfArguments)
         } else {
             let key = request.get(1).unwrap();
             let result = self.get_storage().get(key);

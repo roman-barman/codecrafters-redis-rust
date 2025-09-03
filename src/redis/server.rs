@@ -1,5 +1,7 @@
 use crate::config::Config;
-use crate::redis::handlers::{EchoHandler, GetConfigHandler, GetValueHandler, PingHandler, SetKeyValueHandler};
+use crate::redis::handlers::{
+    EchoHandler, GetConfigHandler, GetValueHandler, PingHandler, SetKeyValueHandler,
+};
 use crate::redis::message_reader::MessageReader;
 use crate::redis::message_writer::MessageWriter;
 use crate::redis::redis_error::RedisError;

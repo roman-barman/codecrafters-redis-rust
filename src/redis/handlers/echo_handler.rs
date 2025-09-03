@@ -1,15 +1,16 @@
 use crate::redis::request::Request;
 use crate::redis::response::Response;
 use crate::redis::Server;
-use anyhow::Error;
 use thiserror::Error;
 
 pub trait EchoHandler {
-    fn echo(&self, request: &Request) -> Result<Response, Error> {
+    fn echo(&self, request: &Request) -> Result<Response, EchoHandlerError> {
         if request.len() != 2 {
-            Err(EchoHandlerError::WrongNumberOfArguments.into())
+            Err(EchoHandlerError::WrongNumberOfArguments)
         } else {
-            Ok(Response::BulkString(Some(request.get(1).unwrap().to_string())))
+            Ok(Response::BulkString(Some(
+                request.get(1).unwrap().to_string(),
+            )))
         }
     }
 }

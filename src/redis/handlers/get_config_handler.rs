@@ -1,6 +1,5 @@
 use crate::config::Config;
 use crate::redis::Server;
-use anyhow::Error;
 use thiserror::Error;
 
 const DIR: &str = "dir";
@@ -11,13 +10,13 @@ pub trait GetConfigHandler<'a> {
         &self,
         parameter: &str,
         config: &'a Config,
-    ) -> Result<(&'static str, Option<&'a str>), Error> {
+    ) -> Result<(&'static str, Option<&'a str>), GetConfigError> {
         if parameter.eq_ignore_ascii_case(DIR) {
             Ok((DIR, config.dir.as_deref()))
         } else if parameter.eq_ignore_ascii_case(DB_FILE_NAME) {
             Ok((DB_FILE_NAME, config.dbfilename.as_deref()))
         } else {
-            Err(GetConfigError::UnknownParameter(parameter.to_string()).into())
+            Err(GetConfigError::UnknownParameter(parameter.to_string()))
         }
     }
 }
