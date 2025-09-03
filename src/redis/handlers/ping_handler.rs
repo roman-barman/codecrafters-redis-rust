@@ -1,8 +1,9 @@
+use crate::redis::response::Response;
 use crate::redis::Server;
 
 pub trait PingHandler {
-    fn ping(&self) -> String {
-        "PONG".to_string()
+    fn ping(&self) -> Response {
+        Response::SimpleString("PONG".to_string())
     }
 }
 

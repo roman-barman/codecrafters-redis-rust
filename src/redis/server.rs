@@ -5,6 +5,7 @@ use crate::redis::handlers::{
 use crate::redis::message_reader::MessageReader;
 use crate::redis::message_writer::MessageWriter;
 use crate::redis::redis_error::RedisError;
+use crate::redis::response::Response;
 use crate::redis::storage::{KeySettings, RedisStorage, Storage};
 use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Token};
@@ -85,9 +86,9 @@ impl Server {
         let result = self.handle_request(stream);
         match result {
             Ok(response) => match response {
-                RespResponse::SimpleString(value) => Ok(stream.write_simple_string(value)?),
-                RespResponse::BulkString(value) => Ok(stream.write_bulk_sting(&value)?),
-                RespResponse::Array(value) => Ok(stream.write_array(&value)?),
+                Response::SimpleString(value) => Ok(stream.write_simple_string(value)?),
+                Response::BulkString(value) => Ok(stream.write_bulk_sting(&value)?),
+                Response::Array(value) => Ok(stream.write_array(&value)?),
             },
             Err(e) => {
                 println!("{}", e);
@@ -99,23 +100,13 @@ impl Server {
         }
     }
 
-    fn handle_request(&mut self, stream: &mut TcpStream) -> Result<RespResponse, RedisError> {
+    fn handle_request(&mut self, stream: &mut TcpStream) -> Result<Response, RedisError> {
         let request = stream.read_message()?;
         let binding = request.get(0).unwrap().to_lowercase();
         let command = binding.as_str();
         match command {
-            "ping" => Ok(RespResponse::SimpleString(self.ping())),
-            "echo" => {
-                if request.len() != 2 {
-                    Err(RedisError::Client(
-                        "echo: wrong number of arguments".to_string(),
-                    ))
-                } else {
-                    Ok(RespResponse::BulkString(Some(
-                        self.echo(request.get(1).unwrap()),
-                    )))
-                }
-            }
+            "ping" => Ok(self.ping()),
+            "echo" => self.echo(&request).map_err(|e| e.into()),
             "get" => {
                 if request.len() != 2 {
                     Err(RedisError::Client(
@@ -123,7 +114,7 @@ impl Server {
                     ))
                 } else {
                     let result = self.get_value(request.get(1).unwrap());
-                    Ok(RespResponse::BulkString(result.map(|x| x.to_string())))
+                    Ok(Response::BulkString(result.map(|x| x.to_string())))
                 }
             }
             "set" => {
@@ -163,7 +154,7 @@ impl Server {
                     }?;
 
                     let result = self.set_key_value(key.clone(), value.clone(), settings);
-                    Ok(RespResponse::BulkString(Some(result)))
+                    Ok(Response::BulkString(Some(result)))
                 }
             }
             "config" => {
@@ -182,7 +173,7 @@ impl Server {
                         let (key, value) =
                             self.get_config(request.get(2).unwrap(), &self.config)?;
 
-                        Ok(RespResponse::Array(vec![
+                        Ok(Response::Array(vec![
                             Some(key.to_string()),
                             value.map(|x| x.to_string()),
                         ]))
@@ -198,10 +189,4 @@ impl GetStorage for Server {
     fn get_storage(&mut self) -> &mut dyn Storage {
         &mut self.storage
     }
-}
-
-enum RespResponse {
-    SimpleString(String),
-    BulkString(Option<String>),
-    Array(Vec<Option<String>>),
 }
