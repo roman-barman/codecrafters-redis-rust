@@ -109,29 +109,9 @@ impl Server {
             "echo" => self.echo(&request).map_err(|e| e.into()),
             "get" => self.get_value(&request).map_err(|e| e.into()),
             "set" => self.set_key_value(&request).map_err(|e| e.into()),
-            "config" => {
-                if request.len() != 3 {
-                    Err(RedisError::Client(
-                        "config: wrong number of arguments".to_string(),
-                    ))
-                } else {
-                    let arg = request.get(1).unwrap();
-                    if arg.to_lowercase() != "get" {
-                        Err(RedisError::Client(format!(
-                            "get: unknown argument name '{}'",
-                            arg
-                        )))
-                    } else {
-                        let (key, value) =
-                            self.get_config(request.get(2).unwrap(), &self.config)?;
-
-                        Ok(Response::Array(vec![
-                            Some(key.to_string()),
-                            value.map(|x| x.to_string()),
-                        ]))
-                    }
-                }
-            }
+            "config" => self
+                .get_config(&request, &self.config)
+                .map_err(|e| e.into()),
             _ => Err(RedisError::Client(format!("Unknown command '{}'", command))),
         }
     }

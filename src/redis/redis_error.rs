@@ -34,9 +34,7 @@ impl From<RequestError> for RedisError {
 
 impl From<GetConfigError> for RedisError {
     fn from(value: GetConfigError) -> Self {
-        match value {
-            GetConfigError::UnknownParameter(_) => RedisError::Client(value.to_string()),
-        }
+        RedisError::Client(value.to_string())
     }
 }
 
