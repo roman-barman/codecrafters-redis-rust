@@ -6,7 +6,7 @@ use crate::redis::message_reader::MessageReader;
 use crate::redis::message_writer::MessageWriter;
 use crate::redis::redis_error::RedisError;
 use crate::redis::response::Response;
-use crate::redis::storage::{KeySettings, RedisStorage, Storage};
+use crate::redis::storage::{RedisStorage, Storage};
 use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
@@ -108,46 +108,7 @@ impl Server {
             "ping" => Ok(self.ping()),
             "echo" => self.echo(&request).map_err(|e| e.into()),
             "get" => self.get_value(&request).map_err(|e| e.into()),
-            "set" => {
-                if request.len() < 3 {
-                    Err(RedisError::Client(
-                        "set: wrong number of arguments".to_string(),
-                    ))
-                } else {
-                    let key = request.get(1).unwrap();
-                    let value = request.get(2).unwrap();
-                    let settings = match request.get(3) {
-                        None => Ok(KeySettings::default()),
-                        Some(value) => {
-                            let arg_name = value.to_lowercase();
-                            if "px" != arg_name {
-                                Err(RedisError::Client(format!(
-                                    "set: unknown argument name '{}'",
-                                    value
-                                )))
-                            } else {
-                                let arg_value = request.get(4);
-                                if arg_value.is_none() {
-                                    Err(RedisError::Client(
-                                        "set: wrong number of arguments".to_string(),
-                                    ))
-                                } else {
-                                    let ttl = arg_value.unwrap().parse::<u64>();
-                                    match ttl {
-                                        Ok(ttl) => Ok(KeySettings::new(ttl)),
-                                        Err(_) => Err(RedisError::Client(
-                                            "set: invalid px value".to_string(),
-                                        )),
-                                    }
-                                }
-                            }
-                        }
-                    }?;
-
-                    let result = self.set_key_value(key.clone(), value.clone(), settings);
-                    Ok(Response::BulkString(Some(result)))
-                }
-            }
+            "set" => self.set_key_value(&request).map_err(|e| e.into()),
             "config" => {
                 if request.len() != 3 {
                     Err(RedisError::Client(

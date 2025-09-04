@@ -1,4 +1,6 @@
-use crate::redis::handlers::{EchoHandlerError, GetConfigError, GetValueHandlerError};
+use crate::redis::handlers::{
+    EchoHandlerError, GetConfigError, GetValueHandlerError, SetKeyValueHandlerError,
+};
 use crate::redis::message_reader::MessageReaderError;
 use crate::redis::request::RequestError;
 use std::io::Error;
@@ -57,5 +59,11 @@ impl From<GetValueHandlerError> for RedisError {
 impl From<Error> for RedisError {
     fn from(value: Error) -> Self {
         RedisError::Connection(value.to_string())
+    }
+}
+
+impl From<SetKeyValueHandlerError> for RedisError {
+    fn from(value: SetKeyValueHandlerError) -> Self {
+        RedisError::Client(value.to_string())
     }
 }
