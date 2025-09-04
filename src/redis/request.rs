@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+#[derive(Debug)]
 pub struct Request {
     value: Vec<String>,
 }

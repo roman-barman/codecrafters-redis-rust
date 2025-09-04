@@ -31,6 +31,8 @@ impl Server {
     }
 
     pub fn run(&mut self) {
+        log::info!("Starting server");
+
         let mut poll = Poll::new().unwrap();
         let addr = "127.0.0.1:6379".parse().unwrap();
         let mut listener = TcpListener::bind(addr).unwrap();
@@ -63,18 +65,9 @@ impl Server {
                             continue;
                         }
 
-                        match self.handle(stream) {
-                            Ok(_) => {}
-                            Err(e) => {
-                                println!("{}", e);
-                                match e {
-                                    RedisError::Client(_) => {}
-                                    _ => {
-                                        poll.registry().deregister(stream).unwrap();
-                                        connections.remove(&token);
-                                    }
-                                }
-                            }
+                        if let Err(RedisError::Connection(_)) = self.handle(stream) {
+                            poll.registry().deregister(stream).unwrap();
+                            connections.remove(&token);
                         }
                     }
                 }
@@ -84,24 +77,26 @@ impl Server {
 
     fn handle(&mut self, stream: &mut TcpStream) -> Result<(), RedisError> {
         let result = self.handle_request(stream);
+        log::info!("{:?}", result);
         match result {
             Ok(response) => match response {
                 Response::SimpleString(value) => Ok(stream.write_simple_string(value)?),
                 Response::BulkString(value) => Ok(stream.write_bulk_sting(&value)?),
                 Response::Array(value) => Ok(stream.write_array(&value)?),
             },
-            Err(e) => {
-                println!("{}", e);
-                match e {
-                    RedisError::Client(e) => Ok(stream.write_error(&e)?),
-                    _ => Err(e),
+            Err(e) => match e {
+                RedisError::Client(e) => {
+                    log::info!("{}", e);
+                    Ok(stream.write_error(&e)?)
                 }
-            }
+                _ => Err(e),
+            },
         }
     }
 
     fn handle_request(&mut self, stream: &mut TcpStream) -> Result<Response, RedisError> {
         let request = stream.read_message()?;
+        log::info!("{:?}", request);
         let binding = request.get(0).unwrap().to_lowercase();
         let command = binding.as_str();
         match command {

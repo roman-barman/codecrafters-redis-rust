@@ -115,7 +115,7 @@ impl FromStr for RespType {
 pub enum MessageReaderError {
     #[error("connection error")]
     Io(#[from] std::io::Error),
-    #[error("connection error")]
+    #[error("empty request")]
     InvalidRequest(#[from] RequestError),
     #[error("invalid RESP bulk string format")]
     InvalidBulkStringFormat,

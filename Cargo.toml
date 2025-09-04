@@ -9,3 +9,5 @@ thiserror = "2"                                # error handling
 chrono = "0.4"
 clap = { version = "4", features = ["derive"] }
 mio = { version = "1", features = ["os-poll", "net"] }
+simple_logger = "5"
+log = "0.4.27"

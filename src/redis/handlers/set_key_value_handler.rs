@@ -29,7 +29,7 @@ pub trait SetKeyValueHandler: GetStorage {
                 let ttl = arg_value.unwrap();
                 match ttl.parse::<u64>() {
                     Ok(ttl) => KeySettings::new(ttl),
-                    Err(_) => return Err(SetKeyValueHandlerError::InvalidPxValue(ttl.to_string()))
+                    Err(_) => return Err(SetKeyValueHandlerError::InvalidPxValue(ttl.to_string())),
                 }
             }
         };
