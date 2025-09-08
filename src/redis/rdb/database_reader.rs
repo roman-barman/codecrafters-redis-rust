@@ -68,7 +68,7 @@ pub enum DatabaseReaderError {
 
 #[cfg(test)]
 mod tests {
-    use crate::redis::rdb::database_reader::is_rdb_file;
+    use crate::redis::rdb::database_reader::{is_rdb_file, read_rdb_version};
     use std::io;
 
     #[test]
@@ -79,5 +79,12 @@ mod tests {
     #[test]
     fn test_is_rdb_file_false() {
         assert!(!is_rdb_file(&mut io::Cursor::new(b"REDIT")).unwrap());
+    }
+
+    #[test]
+    fn test_read_rdb_version() {
+        assert_eq!(
+            read_rdb_version(&mut io::Cursor::new(b"REDIS0001")).unwrap(),
+            "0001".to_string());
     }
 }
