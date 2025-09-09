@@ -85,6 +85,11 @@ where
             let value = read_string(file)?;
             Ok(Section::Metadata(key, value))
         }
+        EOF => {
+            let mut checksum = [0u8; 8];
+            file.read_exact(&mut checksum)?;
+            Ok(Section::Checksum(u64::from_be_bytes(checksum)))
+        }
         _ => Err(DatabaseReaderError::InvalidFileEncoding),
     }
 }
@@ -93,7 +98,7 @@ where
 enum Section {
     Metadata(String, String),
     Database,
-    Checksum,
+    Checksum(u64),
 }
 
 #[derive(Debug, Error)]
@@ -111,7 +116,7 @@ pub enum DatabaseReaderError {
 #[cfg(test)]
 mod tests {
     use crate::redis::rdb::database_reader::{
-        read_header_section, read_length, read_section, read_string, Section, AUX,
+        read_header_section, read_length, read_section, read_string, Section, AUX, EOF,
     };
     use std::io;
 
@@ -160,6 +165,17 @@ mod tests {
             ]))
             .unwrap(),
             Section::Metadata("key".to_string(), "value".to_string())
+        )
+    }
+
+    #[test]
+    fn test_read_checksum_section() {
+        assert_eq!(
+            read_section(&mut io::Cursor::new([
+                EOF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa
+            ]))
+            .unwrap(),
+            Section::Checksum(10)
         )
     }
 }
