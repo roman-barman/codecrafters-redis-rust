@@ -69,6 +69,16 @@ where
     Err(DatabaseReaderError::InvalidLengthEncoding)
 }
 
+fn read_string<T>(file: &mut T) -> Result<String, DatabaseReaderError>
+where
+    T: Read,
+{
+    let length = read_length(file)?;
+    let mut string = vec![0u8; length as usize];
+    file.read_exact(&mut string)?;
+    Ok(std::str::from_utf8(&string)?.to_string())
+}
+
 #[derive(Debug, Error)]
 pub enum DatabaseReaderError {
     #[error("io error")]
@@ -81,7 +91,9 @@ pub enum DatabaseReaderError {
 
 #[cfg(test)]
 mod tests {
-    use crate::redis::rdb::database_reader::{is_rdb_file, read_length, read_rdb_version};
+    use crate::redis::rdb::database_reader::{
+        is_rdb_file, read_length, read_rdb_version, read_string,
+    };
     use std::io;
 
     #[test]
@@ -98,27 +110,36 @@ mod tests {
     fn test_read_rdb_version() {
         assert_eq!(
             read_rdb_version(&mut io::Cursor::new(b"REDIS0001")).unwrap(),
-            "0001".to_string());
+            "0001".to_string()
+        );
     }
 
     #[test]
     fn test_read_length_6_bits() {
-        assert_eq!(
-            read_length(&mut io::Cursor::new([0x2a])).unwrap(),
-            42);
+        assert_eq!(read_length(&mut io::Cursor::new([0x2a])).unwrap(), 42);
     }
 
     #[test]
     fn test_read_length_14_bits() {
         assert_eq!(
             read_length(&mut io::Cursor::new([0x6a, 0xaa])).unwrap(),
-            10922);
+            10922
+        );
     }
 
     #[test]
     fn test_read_length_32_bits() {
         assert_eq!(
             read_length(&mut io::Cursor::new([0x80, 0xff, 0x00, 0xff, 0x00])).unwrap(),
-            4278255360);
+            4278255360
+        );
+    }
+
+    #[test]
+    fn test_read_string() {
+        assert_eq!(
+            read_string(&mut io::Cursor::new([0x4, 0x74, 0x65, 0x73, 0x74])).unwrap(),
+            "test".to_string()
+        )
     }
 }
