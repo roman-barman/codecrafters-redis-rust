@@ -1,13 +1,13 @@
-use chrono::{DateTime, Local, TimeDelta};
+use chrono::{DateTime, TimeZone, Utc};
 use std::collections::HashMap;
 
 pub trait Storage {
     fn get(&mut self, key: &str) -> Option<&str>;
-    fn set(&mut self, key: String, value: String, key_settings: KeySettings);
+    fn set(&mut self, key: String, value: String, px: Option<i64>);
 }
 
 pub struct RedisStorage {
-    storage: HashMap<String, (String, KeySettings)>,
+    storage: HashMap<String, (String, Option<i64>)>,
 }
 
 impl RedisStorage {
@@ -22,7 +22,13 @@ impl Storage for RedisStorage {
     fn get(&mut self, key: &str) -> Option<&str> {
         let should_remove = match self.storage.get(key) {
             None => return None,
-            Some((_, settings)) => settings.ttl.is_some() && settings.ttl.unwrap() <= Local::now(),
+            Some((_, ttl)) => {
+                if ttl.is_none() {
+                    false
+                } else {
+                    DateTime::from_timestamp_millis(ttl.unwrap()).unwrap() <= Utc::now()
+                }
+            }
         };
 
         if should_remove {
@@ -33,20 +39,8 @@ impl Storage for RedisStorage {
         }
     }
 
-    fn set(&mut self, key: String, value: String, key_settings: KeySettings) {
-        self.storage.insert(key, (value, key_settings));
-    }
-}
-
-#[derive(Default)]
-pub struct KeySettings {
-    ttl: Option<DateTime<Local>>,
-}
-
-impl KeySettings {
-    pub fn new(expiry: u64) -> Self {
-        Self {
-            ttl: Some(Local::now() + TimeDelta::try_milliseconds(expiry as i64).unwrap()),
-        }
+    fn set(&mut self, key: String, value: String, px: Option<i64>) {
+        let ttl = px.map(|v| Utc::now().timestamp_millis() + v);
+        self.storage.insert(key, (value, ttl));
     }
 }
