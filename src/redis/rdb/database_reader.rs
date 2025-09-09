@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::{Read, Seek};
 use std::path::PathBuf;
 use thiserror::Error;
@@ -79,6 +80,33 @@ where
     Ok(std::str::from_utf8(&string)?.to_string())
 }
 
+fn read_metadata<T>(file: &mut T) -> Result<HashMap<String, String>, DatabaseReaderError>
+where
+    T: Read + Seek,
+{
+    let mut metadata = HashMap::new();
+    let mut flag = [0u8; 1];
+    file.read_exact(&mut flag)?;
+
+    if flag[0] == AUX {
+        loop {
+            let key = read_string(file).map_err(|_| DatabaseReaderError::InvalidMetadataEncoding)?;
+            let value = read_string(file).map_err(|_| DatabaseReaderError::InvalidMetadataEncoding)?;
+            metadata.insert(key, value);
+
+            let mut flag = [0u8; 1];
+            file.read_exact(&mut flag)?;
+            if flag[0] == SELECT_DB || flag[0] == EOF {
+                break;
+            }
+            file.seek(std::io::SeekFrom::Current(-1))?;
+        }
+    }
+
+    file.seek(std::io::SeekFrom::Current(-1))?;
+    Ok(metadata)
+}
+
 #[derive(Debug, Error)]
 pub enum DatabaseReaderError {
     #[error("io error")]
@@ -87,13 +115,14 @@ pub enum DatabaseReaderError {
     Utf8(#[from] std::str::Utf8Error),
     #[error("invalid length encoding")]
     InvalidLengthEncoding,
+    #[error("invalid metadata encoding")]
+    InvalidMetadataEncoding,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::redis::rdb::database_reader::{
-        is_rdb_file, read_length, read_rdb_version, read_string,
-    };
+    use crate::redis::rdb::database_reader::{is_rdb_file, read_length, read_metadata, read_rdb_version, read_string, AUX, SELECT_DB};
+    use std::collections::HashMap;
     use std::io;
 
     #[test]
@@ -140,6 +169,23 @@ mod tests {
         assert_eq!(
             read_string(&mut io::Cursor::new([0x4, 0x74, 0x65, 0x73, 0x74])).unwrap(),
             "test".to_string()
+        )
+    }
+
+    #[test]
+    fn test_read_metadata() {
+        assert_eq!(
+            read_metadata(&mut io::Cursor::new([
+                AUX,
+                0x4, 0x6b, 0x65, 0x79, 0x31,
+                0x6, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x31,
+                0x4, 0x6b, 0x65, 0x79, 0x32,
+                0x6, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x32,
+                SELECT_DB])).unwrap(),
+            HashMap::from([
+                ("key1".to_string(), "value1".to_string()),
+                ("key2".to_string(), "value2".to_string())
+            ])
         )
     }
 }
