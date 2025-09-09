@@ -1,10 +1,9 @@
-use std::collections::HashMap;
 use std::io::{Read, Seek};
 use std::path::PathBuf;
 use thiserror::Error;
 
-const RDB_MAGIC_STRING_SIZE: u8 = 5;
-const RDB_VERSION_STRING_SIZE: u8 = 4;
+const MAGIC_STRING_SIZE: u8 = 5;
+const VERSION_STRING_SIZE: u8 = 4;
 const EOF: u8 = 0xff;
 const SELECT_DB: u8 = 0xfe;
 const EXPIRE_TIME: u8 = 0xfd;
@@ -20,24 +19,6 @@ impl DatabaseReader {
     pub fn new(path: PathBuf) -> Self {
         Self { path }
     }
-}
-
-fn is_rdb_file<T>(file: &mut T) -> Result<bool, DatabaseReaderError>
-where
-    T: Read,
-{
-    let mut magic_string = [0u8; RDB_MAGIC_STRING_SIZE as usize];
-    file.read_exact(&mut magic_string)?;
-    Ok(&magic_string == b"REDIS")
-}
-
-fn read_rdb_version<T>(file: &mut T) -> Result<String, DatabaseReaderError>
-where
-    T: Read,
-{
-    let mut version = [0u8; RDB_VERSION_STRING_SIZE as usize];
-    file.read_exact(&mut version)?;
-    Ok(std::str::from_utf8(&version)?.to_string())
 }
 
 fn read_length<T>(file: &mut T) -> Result<u32, DatabaseReaderError>
@@ -78,33 +59,18 @@ where
     Ok(std::str::from_utf8(&string)?.to_string())
 }
 
-fn read_metadata<T>(file: &mut T) -> Result<HashMap<String, String>, DatabaseReaderError>
+fn read_header_section<T>(file: &mut T) -> Result<(String, String), DatabaseReaderError>
 where
-    T: Read + Seek,
+    T: Read,
 {
-    let mut metadata = HashMap::new();
-    let mut flag = [0u8; 1];
-    file.read_exact(&mut flag)?;
-
-    if flag[0] == AUX {
-        loop {
-            let key =
-                read_string(file).map_err(|_| DatabaseReaderError::InvalidMetadataEncoding)?;
-            let value =
-                read_string(file).map_err(|_| DatabaseReaderError::InvalidMetadataEncoding)?;
-            metadata.insert(key, value);
-
-            let mut flag = [0u8; 1];
-            file.read_exact(&mut flag)?;
-            if flag[0] == SELECT_DB || flag[0] == EOF {
-                break;
-            }
-            file.seek(std::io::SeekFrom::Current(-1))?;
-        }
-    }
-
-    file.seek(std::io::SeekFrom::Current(-1))?;
-    Ok(metadata)
+    let mut magic_string = [0u8; MAGIC_STRING_SIZE as usize];
+    file.read_exact(&mut magic_string)?;
+    let mut version = [0u8; VERSION_STRING_SIZE as usize];
+    file.read_exact(&mut version)?;
+    Ok((
+        std::str::from_utf8(&magic_string)?.to_string(),
+        std::str::from_utf8(&version)?.to_string(),
+    ))
 }
 
 #[derive(Debug, Error)]
@@ -121,28 +87,15 @@ pub enum DatabaseReaderError {
 
 #[cfg(test)]
 mod tests {
-    use crate::redis::rdb::database_reader::{
-        is_rdb_file, read_length, read_metadata, read_rdb_version, read_string, AUX, SELECT_DB,
-    };
-    use std::collections::HashMap;
+    use crate::redis::rdb::database_reader::{read_header_section, read_length, read_string};
     use std::io;
 
     #[test]
-    fn test_is_rdb_file_true() {
-        assert!(is_rdb_file(&mut io::Cursor::new(b"REDIS")).unwrap());
-    }
-
-    #[test]
-    fn test_is_rdb_file_false() {
-        assert!(!is_rdb_file(&mut io::Cursor::new(b"REDIT")).unwrap());
-    }
-
-    #[test]
-    fn test_read_rdb_version() {
+    fn test_read_header_section() {
         assert_eq!(
-            read_rdb_version(&mut io::Cursor::new(b"0001")).unwrap(),
-            "0001".to_string()
-        );
+            read_header_section(&mut io::Cursor::new(b"REDIS0001")).unwrap(),
+            ("REDIS".to_string(), "0001".to_string())
+        )
     }
 
     #[test]
@@ -171,21 +124,6 @@ mod tests {
         assert_eq!(
             read_string(&mut io::Cursor::new([0x4, 0x74, 0x65, 0x73, 0x74])).unwrap(),
             "test".to_string()
-        )
-    }
-
-    #[test]
-    fn test_read_metadata() {
-        assert_eq!(
-            read_metadata(&mut io::Cursor::new([
-                AUX, 0x4, 0x6b, 0x65, 0x79, 0x31, 0x6, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x31, 0x4,
-                0x6b, 0x65, 0x79, 0x32, 0x6, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x32, SELECT_DB
-            ]))
-            .unwrap(),
-            HashMap::from([
-                ("key1".to_string(), "value1".to_string()),
-                ("key2".to_string(), "value2".to_string())
-            ])
         )
     }
 }
