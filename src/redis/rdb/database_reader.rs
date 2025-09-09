@@ -24,20 +24,18 @@ impl DatabaseReader {
 
 fn is_rdb_file<T>(file: &mut T) -> Result<bool, DatabaseReaderError>
 where
-    T: Read + Seek,
+    T: Read,
 {
     let mut magic_string = [0u8; RDB_MAGIC_STRING_SIZE as usize];
-    file.seek(std::io::SeekFrom::Start(0))?;
     file.read_exact(&mut magic_string)?;
     Ok(&magic_string == b"REDIS")
 }
 
 fn read_rdb_version<T>(file: &mut T) -> Result<String, DatabaseReaderError>
 where
-    T: Read + Seek,
+    T: Read,
 {
     let mut version = [0u8; RDB_VERSION_STRING_SIZE as usize];
-    file.seek(std::io::SeekFrom::Start(RDB_MAGIC_STRING_SIZE as u64))?;
     file.read_exact(&mut version)?;
     Ok(std::str::from_utf8(&version)?.to_string())
 }
@@ -90,8 +88,10 @@ where
 
     if flag[0] == AUX {
         loop {
-            let key = read_string(file).map_err(|_| DatabaseReaderError::InvalidMetadataEncoding)?;
-            let value = read_string(file).map_err(|_| DatabaseReaderError::InvalidMetadataEncoding)?;
+            let key =
+                read_string(file).map_err(|_| DatabaseReaderError::InvalidMetadataEncoding)?;
+            let value =
+                read_string(file).map_err(|_| DatabaseReaderError::InvalidMetadataEncoding)?;
             metadata.insert(key, value);
 
             let mut flag = [0u8; 1];
@@ -121,7 +121,9 @@ pub enum DatabaseReaderError {
 
 #[cfg(test)]
 mod tests {
-    use crate::redis::rdb::database_reader::{is_rdb_file, read_length, read_metadata, read_rdb_version, read_string, AUX, SELECT_DB};
+    use crate::redis::rdb::database_reader::{
+        is_rdb_file, read_length, read_metadata, read_rdb_version, read_string, AUX, SELECT_DB,
+    };
     use std::collections::HashMap;
     use std::io;
 
@@ -138,7 +140,7 @@ mod tests {
     #[test]
     fn test_read_rdb_version() {
         assert_eq!(
-            read_rdb_version(&mut io::Cursor::new(b"REDIS0001")).unwrap(),
+            read_rdb_version(&mut io::Cursor::new(b"0001")).unwrap(),
             "0001".to_string()
         );
     }
@@ -176,12 +178,10 @@ mod tests {
     fn test_read_metadata() {
         assert_eq!(
             read_metadata(&mut io::Cursor::new([
-                AUX,
-                0x4, 0x6b, 0x65, 0x79, 0x31,
-                0x6, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x31,
-                0x4, 0x6b, 0x65, 0x79, 0x32,
-                0x6, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x32,
-                SELECT_DB])).unwrap(),
+                AUX, 0x4, 0x6b, 0x65, 0x79, 0x31, 0x6, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x31, 0x4,
+                0x6b, 0x65, 0x79, 0x32, 0x6, 0x76, 0x61, 0x6C, 0x75, 0x65, 0x32, SELECT_DB
+            ]))
+            .unwrap(),
             HashMap::from([
                 ("key1".to_string(), "value1".to_string()),
                 ("key2".to_string(), "value2".to_string())
