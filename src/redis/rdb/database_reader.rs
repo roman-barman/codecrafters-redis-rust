@@ -73,6 +73,29 @@ where
     ))
 }
 
+fn read_section<T>(file: &mut T) -> Result<Section, DatabaseReaderError>
+where
+    T: Read,
+{
+    let mut op_code = [0u8; 1];
+    file.read_exact(&mut op_code)?;
+    match op_code[0] {
+        AUX => {
+            let key = read_string(file)?;
+            let value = read_string(file)?;
+            Ok(Section::Metadata(key, value))
+        }
+        _ => Err(DatabaseReaderError::InvalidFileEncoding),
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum Section {
+    Metadata(String, String),
+    Database,
+    Checksum,
+}
+
 #[derive(Debug, Error)]
 pub enum DatabaseReaderError {
     #[error("io error")]
@@ -81,13 +104,15 @@ pub enum DatabaseReaderError {
     Utf8(#[from] std::str::Utf8Error),
     #[error("invalid length encoding")]
     InvalidLengthEncoding,
-    #[error("invalid metadata encoding")]
-    InvalidMetadataEncoding,
+    #[error("invalid file encoding")]
+    InvalidFileEncoding,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::redis::rdb::database_reader::{read_header_section, read_length, read_string};
+    use crate::redis::rdb::database_reader::{
+        read_header_section, read_length, read_section, read_string, Section, AUX,
+    };
     use std::io;
 
     #[test]
@@ -124,6 +149,17 @@ mod tests {
         assert_eq!(
             read_string(&mut io::Cursor::new([0x4, 0x74, 0x65, 0x73, 0x74])).unwrap(),
             "test".to_string()
+        )
+    }
+
+    #[test]
+    fn test_read_metadata_section() {
+        assert_eq!(
+            read_section(&mut io::Cursor::new([
+                AUX, 0x3, 0x6B, 0x65, 0x79, 0x5, 0x76, 0x61, 0x6C, 0x75, 0x65
+            ]))
+            .unwrap(),
+            Section::Metadata("key".to_string(), "value".to_string())
         )
     }
 }
