@@ -1,4 +1,5 @@
-use std::io::{Read, Seek};
+use std::collections::HashMap;
+use std::io::Read;
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -85,6 +86,10 @@ where
             let value = read_string(file)?;
             Ok(Section::Metadata(key, value))
         }
+        SELECT_DB => Ok(Section::Database(
+            read_length(file)?,
+            read_database_section(file)?,
+        )),
         EOF => {
             let mut checksum = [0u8; 8];
             file.read_exact(&mut checksum)?;
@@ -94,10 +99,95 @@ where
     }
 }
 
+fn read_database_section<T>(
+    file: &mut T,
+) -> Result<HashMap<String, (String, Option<u64>)>, DatabaseReaderError>
+where
+    T: Read,
+{
+    let mut fb = [0u8; 1];
+    file.read_exact(&mut fb)?;
+
+    if fb[0] != RESIZE_DB {
+        return Err(DatabaseReaderError::InvalidFileEncoding);
+    }
+
+    let db_size = read_length(file)?;
+    let db_size_expire = read_length(file)?;
+    let mut db = HashMap::with_capacity(db_size as usize);
+
+    let mut current_db_size = 0;
+    let mut current_db_size_expire = 0;
+
+    while current_db_size < db_size {
+        let mut byte = [0u8; 1];
+        file.read_exact(&mut byte)?;
+
+        match byte[0] {
+            EXPIRE_TIME => {
+                let mut expire_time = [0u8; 4];
+                file.read_exact(&mut expire_time)?;
+                let expire_time = u32::from_be_bytes(expire_time);
+                read_value_type(file)?;
+                current_db_size_expire += 1;
+                current_db_size += 1;
+
+                if current_db_size_expire > db_size_expire {
+                    return Err(DatabaseReaderError::InvalidFileEncoding);
+                }
+
+                db.insert(
+                    read_string(file)?,
+                    (read_string(file)?, Some(expire_time as u64 * 1000)),
+                );
+            }
+            EXPIRE_TIME_MS => {
+                let mut expire_time = [0u8; 8];
+                file.read_exact(&mut expire_time)?;
+                let expire_time = u64::from_be_bytes(expire_time);
+                read_value_type(file)?;
+                current_db_size_expire += 1;
+                current_db_size += 1;
+
+                if current_db_size_expire > db_size_expire {
+                    return Err(DatabaseReaderError::InvalidFileEncoding);
+                }
+
+                db.insert(read_string(file)?, (read_string(file)?, Some(expire_time)));
+            }
+            _ => {
+                if !is_supported_value_type(byte[0]) {
+                    return Err(DatabaseReaderError::UnsupportedValueType);
+                }
+                current_db_size += 1;
+                db.insert(read_string(file)?, (read_string(file)?, None));
+            }
+        }
+    }
+
+    Ok(db)
+}
+
+fn read_value_type<T>(file: &mut T) -> Result<(), DatabaseReaderError>
+where
+    T: Read,
+{
+    let mut byte = [0u8; 1];
+    file.read_exact(&mut byte)?;
+    if !is_supported_value_type(byte[0]) {
+        return Err(DatabaseReaderError::UnsupportedValueType);
+    }
+    Ok(())
+}
+
+fn is_supported_value_type(byte: u8) -> bool {
+    byte == 0
+}
+
 #[derive(Debug, PartialEq)]
 enum Section {
     Metadata(String, String),
-    Database,
+    Database(u32, HashMap<String, (String, Option<u64>)>),
     Checksum(u64),
 }
 
@@ -111,6 +201,8 @@ pub enum DatabaseReaderError {
     InvalidLengthEncoding,
     #[error("invalid file encoding")]
     InvalidFileEncoding,
+    #[error("unsupported value type")]
+    UnsupportedValueType,
 }
 
 #[cfg(test)]
@@ -163,7 +255,7 @@ mod tests {
             read_section(&mut io::Cursor::new([
                 AUX, 0x3, 0x6B, 0x65, 0x79, 0x5, 0x76, 0x61, 0x6C, 0x75, 0x65
             ]))
-            .unwrap(),
+                .unwrap(),
             Section::Metadata("key".to_string(), "value".to_string())
         )
     }
@@ -174,7 +266,7 @@ mod tests {
             read_section(&mut io::Cursor::new([
                 EOF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa
             ]))
-            .unwrap(),
+                .unwrap(),
             Section::Checksum(10)
         )
     }
