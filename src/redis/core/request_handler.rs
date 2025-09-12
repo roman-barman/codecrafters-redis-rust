@@ -2,6 +2,7 @@ use crate::redis::core::configuration::Configuration;
 use crate::redis::core::echo::echo;
 use crate::redis::core::error::Error;
 use crate::redis::core::get_config::get_config;
+use crate::redis::core::get_keys::get_keys;
 use crate::redis::core::get_value::get_value;
 use crate::redis::core::ping::ping;
 use crate::redis::core::read_request::ReadRequest;
@@ -44,6 +45,7 @@ impl RequestHandler {
             "get" => get_value(&mut self.storage, &request).map_err(|e| e.into()),
             "set" => set_key_value(&mut self.storage, &request).map_err(|e| e.into()),
             "config" => get_config(&request, &self.configuration).map_err(|e| e.into()),
+            "keys" => Ok(get_keys(&mut self.storage)),
             _ => Err(Error::Client(format!("Unknown command '{}'", command))),
         };
 

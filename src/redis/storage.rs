@@ -18,13 +18,7 @@ impl Storage for RedisStorage {
     fn get(&mut self, key: &str) -> Option<&str> {
         let should_remove = match self.storage.get(key) {
             None => return None,
-            Some((_, ttl)) => {
-                if ttl.is_none() {
-                    false
-                } else {
-                    DateTime::from_timestamp_millis(ttl.unwrap()).unwrap() <= Utc::now()
-                }
-            }
+            Some((_, ttl)) => is_expired(ttl),
         };
 
         if should_remove {
@@ -39,4 +33,23 @@ impl Storage for RedisStorage {
         let ttl = px.map(|v| Utc::now().timestamp_millis() + v);
         self.storage.insert(key, (value, ttl));
     }
+
+    fn get_keys(&mut self) -> Vec<&str> {
+        let to_delete: Vec<String> = self
+            .storage
+            .iter()
+            .filter(|(_, (_, ttl))| is_expired(ttl))
+            .map(|(k, _)| k.clone())
+            .collect();
+
+        for key in to_delete {
+            self.storage.remove(&key);
+        }
+
+        self.storage.keys().map(|x| x.as_str()).collect()
+    }
+}
+
+fn is_expired(ttl: &Option<i64>) -> bool {
+    ttl.is_some() && DateTime::from_timestamp_millis(ttl.unwrap()).unwrap() <= Utc::now()
 }
