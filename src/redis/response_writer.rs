@@ -1,7 +1,9 @@
+use crate::redis::core::WriteResponse;
 use mio::net::TcpStream;
 use std::io::{Error, Write};
 
-pub trait MessageWriter: Write {
+impl WriteResponse for TcpStream {
+    type Error = Error;
     fn write_simple_string(&mut self, message: impl AsRef<str>) -> Result<(), Error> {
         self.write_all(format!("+{}\r\n", message.as_ref()).as_bytes())
     }
@@ -16,7 +18,6 @@ pub trait MessageWriter: Write {
             None => self.write_all(b"$-1\r\n"),
         }
     }
-
     fn write_array(&mut self, message: &Vec<Option<impl AsRef<str>>>) -> Result<(), Error> {
         self.write_all(format!("*{}\r\n", message.len()).as_bytes())?;
         for message in message {
@@ -25,5 +26,3 @@ pub trait MessageWriter: Write {
         Ok(())
     }
 }
-
-impl MessageWriter for TcpStream {}

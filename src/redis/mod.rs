@@ -1,11 +1,9 @@
-mod handlers;
-mod message_reader;
-mod message_writer;
+mod core;
 mod rdb;
-mod redis_error;
-mod request;
-mod response;
+mod request_reader;
+mod response_writer;
 mod server;
 mod storage;
 
+pub use core::Configuration;
 pub use server::Server;

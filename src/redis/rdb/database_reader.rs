@@ -255,7 +255,7 @@ mod tests {
             read_section(&mut io::Cursor::new([
                 AUX, 0x3, 0x6B, 0x65, 0x79, 0x5, 0x76, 0x61, 0x6C, 0x75, 0x65
             ]))
-                .unwrap(),
+            .unwrap(),
             Section::Metadata("key".to_string(), "value".to_string())
         )
     }
@@ -266,7 +266,7 @@ mod tests {
             read_section(&mut io::Cursor::new([
                 EOF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa
             ]))
-                .unwrap(),
+            .unwrap(),
             Section::Checksum(10)
         )
     }

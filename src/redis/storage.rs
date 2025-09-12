@@ -1,10 +1,6 @@
-use chrono::{DateTime, TimeZone, Utc};
+use crate::redis::core::Storage;
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
-
-pub trait Storage {
-    fn get(&mut self, key: &str) -> Option<&str>;
-    fn set(&mut self, key: String, value: String, px: Option<i64>);
-}
 
 pub struct RedisStorage {
     storage: HashMap<String, (String, Option<i64>)>,
