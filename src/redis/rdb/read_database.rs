@@ -1,3 +1,5 @@
+use crate::redis::rdb::constants::{AUX, EOF, EXPIRE_TIME, EXPIRE_TIME_MS, RESIZE_DB, SELECT_DB};
+use crate::redis::rdb::ttl::Ttl;
 use std::collections::HashMap;
 use std::io::Read;
 use std::path::PathBuf;
@@ -5,23 +7,29 @@ use thiserror::Error;
 
 const MAGIC_STRING_SIZE: u8 = 5;
 const VERSION_STRING_SIZE: u8 = 4;
-const EOF: u8 = 0xff;
-const SELECT_DB: u8 = 0xfe;
-const EXPIRE_TIME: u8 = 0xfd;
-const EXPIRE_TIME_MS: u8 = 0xfc;
-const RESIZE_DB: u8 = 0xfb;
-const AUX: u8 = 0xfa;
 
-pub struct DatabaseReader {
-    path: PathBuf,
-}
-
-impl DatabaseReader {
-    pub fn new(path: PathBuf) -> Self {
-        Self { path }
+pub fn read_first_database(
+    path: &PathBuf,
+) -> Result<Option<HashMap<String, (String, Ttl)>>, DatabaseReaderError> {
+    let mut file = std::fs::File::open(path)?;
+    let (magic_string, _) = read_header_section(&mut file)?;
+    if magic_string != "REDIS" {
+        return Err(DatabaseReaderError::UnsupportedFileFormat);
     }
-}
 
+    loop {
+        let section = read_section(&mut file)?;
+        match section {
+            Section::Metadata(_, _) => {}
+            Section::Database(_, data) => return Ok(Some(data)),
+            Section::Checksum(_) => {
+                break;
+            }
+        }
+    }
+
+    Ok(None)
+}
 fn read_length<T>(file: &mut T) -> Result<u32, DatabaseReaderError>
 where
     T: Read,
@@ -101,7 +109,7 @@ where
 
 fn read_database_section<T>(
     file: &mut T,
-) -> Result<HashMap<String, (String, Option<u64>)>, DatabaseReaderError>
+) -> Result<HashMap<String, (String, Ttl)>, DatabaseReaderError>
 where
     T: Read,
 {
@@ -138,7 +146,7 @@ where
 
                 db.insert(
                     read_string(file)?,
-                    (read_string(file)?, Some(expire_time as u64 * 1000)),
+                    (read_string(file)?, Ttl::Seconds(expire_time)),
                 );
             }
             EXPIRE_TIME_MS => {
@@ -153,14 +161,17 @@ where
                     return Err(DatabaseReaderError::InvalidFileEncoding);
                 }
 
-                db.insert(read_string(file)?, (read_string(file)?, Some(expire_time)));
+                db.insert(
+                    read_string(file)?,
+                    (read_string(file)?, Ttl::Milliseconds(expire_time)),
+                );
             }
             _ => {
                 if !is_supported_value_type(byte[0]) {
                     return Err(DatabaseReaderError::UnsupportedValueType);
                 }
                 current_db_size += 1;
-                db.insert(read_string(file)?, (read_string(file)?, None));
+                db.insert(read_string(file)?, (read_string(file)?, Ttl::None));
             }
         }
     }
@@ -187,7 +198,7 @@ fn is_supported_value_type(byte: u8) -> bool {
 #[derive(Debug, PartialEq)]
 enum Section {
     Metadata(String, String),
-    Database(u32, HashMap<String, (String, Option<u64>)>),
+    Database(u32, HashMap<String, (String, Ttl)>),
     Checksum(u64),
 }
 
@@ -203,11 +214,13 @@ pub enum DatabaseReaderError {
     InvalidFileEncoding,
     #[error("unsupported value type")]
     UnsupportedValueType,
+    #[error("unsupported file format")]
+    UnsupportedFileFormat,
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::redis::rdb::database_reader::{
+    use crate::redis::rdb::read_database::{
         read_header_section, read_length, read_section, read_string, Section, AUX, EOF,
     };
     use std::io;

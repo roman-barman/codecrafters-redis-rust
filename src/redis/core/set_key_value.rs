@@ -27,7 +27,7 @@ pub fn set_key_value(
             }
 
             let px = arg_value.unwrap();
-            match px.parse::<i64>() {
+            match px.parse::<u64>() {
                 Ok(px) => Some(px),
                 Err(_) => return Err(SetKeyValueError::InvalidPxValue(px.to_string())),
             }

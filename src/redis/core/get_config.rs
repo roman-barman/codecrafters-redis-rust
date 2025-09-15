@@ -21,12 +21,12 @@ pub fn get_config(request: &Request, config: &Configuration) -> Result<Response,
     if parameter.eq_ignore_ascii_case(DIR) {
         Ok(Response::Array(vec![
             Some(DIR.to_string()),
-            config.dir.as_deref().map(|x| x.to_string()),
+            config.dir().map(|x| x.to_string()),
         ]))
     } else if parameter.eq_ignore_ascii_case(DB_FILE_NAME) {
         Ok(Response::Array(vec![
             Some(DB_FILE_NAME.to_string()),
-            config.db_file_name.as_deref().map(|x| x.to_string()),
+            config.db_file_name().map(|x| x.to_string()),
         ]))
     } else {
         Err(GetConfigError::UnknownParameter(parameter.to_string()))

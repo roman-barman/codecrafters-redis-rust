@@ -11,3 +11,4 @@ clap = { version = "4", features = ["derive"] }
 mio = { version = "1", features = ["os-poll", "net"] }
 simple_logger = "5"
 log = "0.4.27"
+crc64 = "2"

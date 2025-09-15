@@ -11,14 +11,15 @@ use crate::redis::core::response::Response;
 use crate::redis::core::set_key_value::set_key_value;
 use crate::redis::core::storage::Storage;
 use crate::redis::core::write_response::WriteResponse;
+use std::rc::Rc;
 
 pub struct RequestHandler {
     storage: Box<dyn Storage>,
-    configuration: Configuration,
+    configuration: Rc<Configuration>,
 }
 
 impl RequestHandler {
-    pub fn new(storage: Box<dyn Storage>, configuration: Configuration) -> Self {
+    pub fn new(storage: Box<dyn Storage>, configuration: Rc<Configuration>) -> Self {
         Self {
             storage,
             configuration,
@@ -31,7 +32,7 @@ impl RequestHandler {
     ) -> Result<(), Error> {
         let request = stream
             .read_request()
-            .map_err(|e| Error::Connection("cannot read request".to_string()))?;
+            .map_err(|_| Error::Connection("cannot read request".to_string()))?;
         if request.len() == 0 {
             return Err(Error::Connection("empty request".to_string()));
         }

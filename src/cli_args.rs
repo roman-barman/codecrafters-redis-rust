@@ -13,9 +13,6 @@ pub struct CliArgs {
 
 impl From<CliArgs> for Configuration {
     fn from(value: CliArgs) -> Self {
-        Self {
-            dir: value.dir,
-            db_file_name: value.dbfilename,
-        }
+        Configuration::new(value.dir, value.dbfilename)
     }
 }
