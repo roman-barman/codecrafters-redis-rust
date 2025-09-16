@@ -2,23 +2,24 @@ use crate::redis::rdb::constants::{AUX, EOF, EXPIRE_TIME, EXPIRE_TIME_MS, RESIZE
 use crate::redis::rdb::ttl::Ttl;
 use std::collections::HashMap;
 use std::io::Read;
-use std::path::PathBuf;
 use thiserror::Error;
 
 const MAGIC_STRING_SIZE: u8 = 5;
 const VERSION_STRING_SIZE: u8 = 4;
 
-pub fn read_first_database(
-    path: &PathBuf,
-) -> Result<Option<HashMap<String, (String, Ttl)>>, DatabaseReaderError> {
-    let mut file = std::fs::File::open(path)?;
-    let (magic_string, _) = read_header_section(&mut file)?;
+pub fn read_first_database<T>(
+    reader: &mut T,
+) -> Result<Option<HashMap<String, (String, Ttl)>>, DatabaseReaderError>
+where
+    T: Read,
+{
+    let (magic_string, _) = read_header_section(reader)?;
     if magic_string != "REDIS" {
         return Err(DatabaseReaderError::UnsupportedFileFormat);
     }
 
     loop {
-        let section = read_section(&mut file)?;
+        let section = read_section(reader)?;
         match section {
             Section::Metadata(_, _) => {}
             Section::Database(_, data) => return Ok(Some(data)),

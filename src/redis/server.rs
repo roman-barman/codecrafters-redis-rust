@@ -1,5 +1,4 @@
 use crate::redis::core::{Configuration, Error, RequestHandler};
-use crate::redis::rdb::read_first_database;
 use crate::redis::storage::RedisStorage;
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
@@ -72,20 +71,15 @@ impl Server {
 fn create_storage(configuration: &Configuration) -> RedisStorage {
     let dir = configuration.dir();
     let db_file_name = configuration.db_file_name();
+    let mut storage = RedisStorage::default();
 
     if dir.is_some() && db_file_name.is_some() {
         let path = PathBuf::from(Path::new(dir.unwrap()).join(db_file_name.unwrap()));
-        match read_first_database(&path) {
-            Ok(db) => match db {
-                None => RedisStorage::default(),
-                Some(db) => RedisStorage::new(db),
-            },
-            Err(e) => {
-                log::error!("Error reading database: {}", e);
-                RedisStorage::default()
-            }
+        let result = storage.restore(&path);
+        if let Err(e) = result {
+            log::error!("error restoring storage: {}", e);
         }
-    } else {
-        RedisStorage::default()
     }
+
+    storage
 }

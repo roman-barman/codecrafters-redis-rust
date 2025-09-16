@@ -8,6 +8,7 @@ use crate::redis::core::ping::ping;
 use crate::redis::core::read_request::ReadRequest;
 use crate::redis::core::request::Request;
 use crate::redis::core::response::Response;
+use crate::redis::core::save::save;
 use crate::redis::core::set_key_value::set_key_value;
 use crate::redis::core::storage::Storage;
 use crate::redis::core::write_response::WriteResponse;
@@ -47,6 +48,7 @@ impl RequestHandler {
             "set" => set_key_value(&mut self.storage, &request).map_err(|e| e.into()),
             "config" => get_config(&request, &self.configuration).map_err(|e| e.into()),
             "keys" => Ok(get_keys(&mut self.storage)),
+            "save" => Ok(save(&mut self.storage, &self.configuration)),
             _ => Err(Error::Client(format!("Unknown command '{}'", command))),
         };
 
