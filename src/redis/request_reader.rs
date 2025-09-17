@@ -8,7 +8,7 @@ impl ReadRequest for TcpStream {
     type Error = MessageReaderError;
     fn read_request(&self) -> Result<Vec<String>, MessageReaderError> {
         let reader = BufReader::with_capacity(10, self);
-        Ok(read_message(reader)?)
+        read_message(reader)
     }
 }
 

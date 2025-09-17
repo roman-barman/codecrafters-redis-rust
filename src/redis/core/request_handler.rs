@@ -34,7 +34,7 @@ impl RequestHandler {
         let request = stream
             .read_request()
             .map_err(|_| Error::Connection("cannot read request".to_string()))?;
-        if request.len() == 0 {
+        if request.is_empty() {
             return Err(Error::Connection("empty request".to_string()));
         }
         let request = Request::new(request);

@@ -18,7 +18,7 @@ impl WriteResponse for TcpStream {
             None => self.write_all(b"$-1\r\n"),
         }
     }
-    fn write_array(&mut self, message: &Vec<Option<impl AsRef<str>>>) -> Result<(), Error> {
+    fn write_array(&mut self, message: &[Option<impl AsRef<str>>]) -> Result<(), Error> {
         self.write_all(format!("*{}\r\n", message.len()).as_bytes())?;
         for message in message {
             self.write_bulk_sting(message)?;

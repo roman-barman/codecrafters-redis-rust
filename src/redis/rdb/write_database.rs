@@ -17,8 +17,8 @@ where
 
     cursor.write_all(b"REDIS")?;
     cursor.write_all(version.as_bytes().split_at(4).0)?;
-    if metadata.is_some() {
-        for (key, value) in metadata.unwrap() {
+    if let Some(metadata) = metadata {
+        for (key, value) in metadata {
             cursor.write_all(&[AUX])?;
             write_string(&mut cursor, key)?;
             write_string(&mut cursor, value)?;
