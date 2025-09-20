@@ -1,10 +1,10 @@
 use crate::redis::core::request::Request;
 use crate::redis::core::response::Response;
-use crate::redis::core::storage::Storage;
+use crate::redis::rdb::RedisStorage;
 use thiserror::Error;
 
 pub fn set_key_value(
-    storage: &mut Box<dyn Storage>,
+    storage: &mut RedisStorage,
     request: &Request,
 ) -> Result<Response, SetKeyValueError> {
     if request.len() < 3 {

@@ -1,7 +1,7 @@
 use crate::redis::core::response::Response;
-use crate::redis::core::Storage;
+use crate::redis::rdb::RedisStorage;
 
-pub fn get_keys(storage: &mut Box<dyn Storage>) -> Response {
+pub fn get_keys(storage: &mut RedisStorage) -> Response {
     Response::Array(
         storage
             .get_keys()

@@ -1,12 +1,9 @@
 use crate::redis::core::request::Request;
 use crate::redis::core::response::Response;
-use crate::redis::core::storage::Storage;
+use crate::redis::rdb::RedisStorage;
 use thiserror::Error;
 
-pub fn get_value(
-    storage: &mut Box<dyn Storage>,
-    request: &Request,
-) -> Result<Response, GetValueError> {
+pub fn get_value(storage: &mut RedisStorage, request: &Request) -> Result<Response, GetValueError> {
     if request.len() != 2 {
         Err(GetValueError::WrongNumberOfArguments)
     } else {

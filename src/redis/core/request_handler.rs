@@ -10,17 +10,17 @@ use crate::redis::core::request::Request;
 use crate::redis::core::response::Response;
 use crate::redis::core::save::save;
 use crate::redis::core::set_key_value::set_key_value;
-use crate::redis::core::storage::Storage;
 use crate::redis::core::write_response::WriteResponse;
+use crate::redis::rdb::RedisStorage;
 use std::rc::Rc;
 
 pub struct RequestHandler {
-    storage: Box<dyn Storage>,
+    storage: RedisStorage,
     configuration: Rc<Configuration>,
 }
 
 impl RequestHandler {
-    pub fn new(storage: Box<dyn Storage>, configuration: Rc<Configuration>) -> Self {
+    pub fn new(storage: RedisStorage, configuration: Rc<Configuration>) -> Self {
         Self {
             storage,
             configuration,

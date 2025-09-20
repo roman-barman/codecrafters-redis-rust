@@ -1,5 +1,5 @@
 use crate::redis::core::{Configuration, Error, RequestHandler};
-use crate::redis::storage::RedisStorage;
+use crate::redis::rdb::RedisStorage;
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
@@ -22,8 +22,7 @@ impl Server {
     pub fn run(&mut self) {
         log::info!("Starting server");
         let storage = create_storage(&self.configuration);
-        let mut request_handler =
-            RequestHandler::new(Box::new(storage), self.configuration.clone());
+        let mut request_handler = RequestHandler::new(storage, self.configuration.clone());
 
         let mut poll = Poll::new().unwrap();
         let addr = "127.0.0.1:6379".parse().unwrap();
@@ -76,7 +75,7 @@ fn create_storage(configuration: &Configuration) -> RedisStorage {
     if let Some(dir) = dir {
         if let Some(db_file_name) = db_file_name {
             let path = Path::new(dir).join(db_file_name);
-            let result = storage.restore(&path);
+            let result = storage.restore_database(&path);
             if let Err(e) = result {
                 log::error!("error restoring storage: {}", e);
             }
