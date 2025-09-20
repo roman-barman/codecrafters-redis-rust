@@ -1,81 +1,76 @@
 use crate::redis::rdb::constants::{AUX, EOF, EXPIRE_TIME, EXPIRE_TIME_MS, RESIZE_DB, SELECT_DB};
 use crate::redis::rdb::ttl::Ttl;
-use std::io;
-use std::io::{Cursor, Error, Write};
+use crc_fast::checksum_file;
+use crc_fast::CrcAlgorithm::Crc64Redis;
+use std::fs::File;
+use std::io::{Error, Write};
+use std::path::Path;
 
-pub fn write_database<T>(
+pub fn write_database(
     version: &str,
     metadata: Option<&Vec<(&str, &str)>>,
     databases: &Vec<(u32, Vec<(&str, (&str, &Ttl))>)>,
-    writer: &mut T,
+    path: &Path,
     calculate_checksum: bool,
-) -> Result<(), Error>
-where
-    T: Write,
-{
-    let mut cursor = Cursor::new(Vec::<u8>::new());
+) -> Result<(), Error> {
+    let mut file = File::create(path)?;
 
-    cursor.write_all(b"REDIS")?;
-    cursor.write_all(version.as_bytes().split_at(4).0)?;
+    file.write_all(b"REDIS")?;
+    file.write_all(version.as_bytes().split_at(4).0)?;
     if let Some(metadata) = metadata {
         for (key, value) in metadata {
-            cursor.write_all(&[AUX])?;
-            write_string(&mut cursor, key)?;
-            write_string(&mut cursor, value)?;
+            file.write_all(&[AUX])?;
+            write_string(&mut file, key)?;
+            write_string(&mut file, value)?;
         }
     }
     for (number, data) in databases {
-        cursor.write_all(&[SELECT_DB])?;
-        write_length(&mut cursor, number)?;
+        file.write_all(&[SELECT_DB])?;
+        write_length(&mut file, number)?;
         let db_size = data.len() as u32;
         let db_size_expire = data.iter().filter(|(_, (_, ttl))| ttl.is_expired()).count() as u32;
-        cursor.write_all(&[RESIZE_DB])?;
-        write_length(&mut cursor, &db_size)?;
-        write_length(&mut cursor, &db_size_expire)?;
+        file.write_all(&[RESIZE_DB])?;
+        write_length(&mut file, &db_size)?;
+        write_length(&mut file, &db_size_expire)?;
 
         for (key, (value, ttl)) in data {
             match ttl {
                 Ttl::Seconds(seconds) => {
-                    cursor.write_all(&[EXPIRE_TIME])?;
-                    cursor.write_all(&seconds.to_be_bytes())?;
-                    cursor.write_all(&[0])?;
-                    write_string(&mut cursor, key)?;
-                    write_string(&mut cursor, value)?;
+                    file.write_all(&[EXPIRE_TIME])?;
+                    file.write_all(&seconds.to_be_bytes())?;
+                    file.write_all(&[0])?;
+                    write_string(&mut file, key)?;
+                    write_string(&mut file, value)?;
                 }
                 Ttl::Milliseconds(milliseconds) => {
-                    cursor.write_all(&[EXPIRE_TIME_MS])?;
-                    cursor.write_all(&milliseconds.to_be_bytes())?;
-                    cursor.write_all(&[0])?;
-                    write_string(&mut cursor, key)?;
-                    write_string(&mut cursor, value)?;
+                    file.write_all(&[EXPIRE_TIME_MS])?;
+                    file.write_all(&milliseconds.to_be_bytes())?;
+                    file.write_all(&[0])?;
+                    write_string(&mut file, key)?;
+                    write_string(&mut file, value)?;
                 }
                 Ttl::None => {
-                    cursor.write_all(&[0])?;
-                    write_string(&mut cursor, key)?;
-                    write_string(&mut cursor, value)?;
+                    file.write_all(&[0])?;
+                    write_string(&mut file, key)?;
+                    write_string(&mut file, value)?;
                 }
             }
         }
     }
 
-    cursor.write_all(&[EOF])?;
+    file.write_all(&[EOF])?;
 
     if calculate_checksum {
-        let checksum = crc64::crc64(0, cursor.get_ref().as_slice());
-        cursor.write_all(checksum.to_be_bytes().as_slice())?;
+        let checksum = checksum_file(Crc64Redis, path.to_str().unwrap(), None)?;
+        file.write_all(checksum.to_be_bytes().as_slice())?;
     } else {
-        cursor.write_all(0u64.to_be_bytes().as_slice())?;
+        file.write_all(0u64.to_be_bytes().as_slice())?;
     }
-
-    io::copy(&mut cursor.get_ref().as_slice(), writer)?;
 
     Ok(())
 }
 
-fn write_length<T>(writer: &mut T, length: &u32) -> Result<(), Error>
-where
-    T: Write,
-{
+fn write_length(writer: &mut File, length: &u32) -> Result<(), Error> {
     match length {
         0..64 => writer.write_all(&[*length as u8]),
         64..16384 => {
@@ -98,10 +93,7 @@ where
     }
 }
 
-fn write_string<T>(writer: &mut T, string: &str) -> Result<(), Error>
-where
-    T: Write,
-{
+fn write_string(writer: &mut File, string: &str) -> Result<(), Error> {
     write_length(writer, &(string.len() as u32))?;
     writer.write_all(string.as_bytes())
 }

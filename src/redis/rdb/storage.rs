@@ -1,11 +1,10 @@
-use crate::redis::rdb::read_database::read_first_database;
+use crate::redis::rdb::read_database::read_databases;
 use crate::redis::rdb::ttl::Ttl;
 use crate::redis::rdb::write_database::write_database;
 use chrono::Utc;
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Default)]
 pub struct RedisStorage {
@@ -13,11 +12,8 @@ pub struct RedisStorage {
 }
 
 impl RedisStorage {
-    pub fn restore_database(&mut self, path: &PathBuf) -> Result<(), RedisStorageError> {
-        let mut file = File::open(path).map_err(|_| RedisStorageError {
-            msg: format!("error opening file: {}", path.to_str().unwrap()),
-        })?;
-        let db = read_first_database(&mut file).map_err(|e| RedisStorageError {
+    pub fn restore_database(&mut self, path: &Path) -> Result<(), RedisStorageError> {
+        let db = read_databases(path).map_err(|e| RedisStorageError {
             msg: format!("error restore database: {}", e),
         })?;
         if let Some(db) = db {
@@ -48,6 +44,24 @@ impl RedisStorage {
     }
 
     pub fn get_keys(&mut self) -> Vec<&str> {
+        self.remove_expired_keys();
+        self.storage.keys().map(|x| x.as_str()).collect()
+    }
+
+    pub fn backup_database(&mut self, path: &Path) -> Result<(), RedisStorageError> {
+        self.remove_expired_keys();
+        let db = self
+            .storage
+            .iter()
+            .map(|(k, (v, ttl))| (k.as_str(), (v.as_str(), ttl)))
+            .collect();
+        let data = vec![(1, db)];
+        write_database("0001", None, &data, path, false).map_err(|e| RedisStorageError {
+            msg: format!("error backup database: {}", e),
+        })
+    }
+
+    fn remove_expired_keys(&mut self) {
         let to_delete: Vec<String> = self
             .storage
             .iter()
@@ -58,26 +72,9 @@ impl RedisStorage {
         for key in to_delete {
             self.storage.remove(&key);
         }
-
-        self.storage.keys().map(|x| x.as_str()).collect()
-    }
-
-    pub fn backup_database(&self, path: &Path) -> Result<(), RedisStorageError> {
-        let mut file = File::create(path).map_err(|e| RedisStorageError {
-            msg: format!("error creating file: {}", e),
-        })?;
-        let db = self
-            .storage
-            .iter()
-            .filter(|(_, (_, ttl))| !ttl.is_expired())
-            .map(|(k, (v, ttl))| (k.as_str(), (v.as_str(), ttl)))
-            .collect();
-        let data = vec![(1, db)];
-        write_database("0001", None, &data, &mut file, false).map_err(|e| RedisStorageError {
-            msg: format!("error backup database: {}", e),
-        })
     }
 }
+
 #[derive(thiserror::Error, Debug)]
 pub struct RedisStorageError {
     msg: String,
