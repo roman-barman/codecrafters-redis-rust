@@ -3,7 +3,6 @@ use crate::redis::rdb::RedisStorage;
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
-use std::path::Path;
 use std::rc::Rc;
 
 const LISTENER_TOKEN: Token = Token(0);
@@ -68,19 +67,12 @@ impl Server {
 }
 
 fn create_storage(configuration: &Configuration) -> RedisStorage {
-    let dir = configuration.dir();
-    let db_file_name = configuration.db_file_name();
     let mut storage = RedisStorage::default();
-
-    if let Some(dir) = dir {
-        if let Some(db_file_name) = db_file_name {
-            let path = Path::new(dir).join(db_file_name);
-            let result = storage.restore_database(&path);
-            if let Err(e) = result {
-                log::error!("error restoring storage: {}", e);
-            }
+    if let Some(path) = configuration.get_db_file_path() {
+        let result = storage.restore_database(&path);
+        if let Err(e) = result {
+            log::error!("error restoring storage: {}", e);
         }
     }
-
     storage
 }
