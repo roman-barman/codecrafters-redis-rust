@@ -10,9 +10,9 @@ use thiserror::Error;
 const MAGIC_STRING_SIZE: u8 = 5;
 const VERSION_STRING_SIZE: u8 = 4;
 
-pub fn read_databases(
-    path: &Path,
-) -> Result<Option<HashMap<String, (String, Ttl)>>, DatabaseReaderError> {
+type ReadResult = Result<Option<HashMap<String, (String, Ttl)>>, DatabaseReaderError>;
+
+pub fn read_databases(path: &Path) -> ReadResult {
     let mut file = File::open(path)?;
     let mut digest = Digest::new(CrcAlgorithm::Crc64Redis);
     let mut digest_option = Some(&mut digest);

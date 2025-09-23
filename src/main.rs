@@ -9,7 +9,7 @@ mod redis;
 
 fn main() {
     SimpleLogger::new()
-        .with_level(LevelFilter::Debug)
+        .with_level(LevelFilter::Info)
         .init()
         .unwrap();
 

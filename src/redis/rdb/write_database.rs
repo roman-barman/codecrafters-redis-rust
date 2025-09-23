@@ -6,10 +6,12 @@ use std::fs::File;
 use std::io::{Error, Write};
 use std::path::Path;
 
+type Database<'a> = Vec<(u32, Vec<(&'a str, (&'a str, &'a Ttl))>)>;
+
 pub fn write_database(
     version: &str,
     metadata: Option<&Vec<(&str, &str)>>,
-    databases: &Vec<(u32, Vec<(&str, (&str, &Ttl))>)>,
+    databases: &Database,
     path: &Path,
     calculate_checksum: bool,
 ) -> Result<(), Error> {
