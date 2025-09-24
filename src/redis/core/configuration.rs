@@ -3,11 +3,20 @@ use std::path::{Path, PathBuf};
 pub struct Configuration {
     dir: Option<String>,
     db_file_name: Option<String>,
+    port: u16,
 }
 
 impl Configuration {
-    pub fn new(dir: Option<String>, db_file_name: Option<String>) -> Self {
-        Self { dir, db_file_name }
+    pub fn new(dir: Option<String>, db_file_name: Option<String>, port: u16) -> Self {
+        Self {
+            dir,
+            db_file_name,
+            port,
+        }
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
     }
 
     pub fn dir(&self) -> Option<&String> {
