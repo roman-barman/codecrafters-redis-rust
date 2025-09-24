@@ -1,11 +1,14 @@
-use crate::redis::core::response::Response;
+use crate::redis::core::WriteResponse;
 use crate::redis::rdb::RedisStorage;
 use crate::redis::Configuration;
 
-pub fn save(storage: &mut RedisStorage, configuration: &Configuration) -> Response {
+pub fn save(
+    writer: &mut impl WriteResponse,
+    storage: &mut RedisStorage,
+    configuration: &Configuration,
+) -> std::io::Result<()> {
     if let Some(path) = configuration.get_db_file_path() {
         let _ = storage.backup_database(&path);
     }
-
-    Response::SimpleString("OK".to_string())
+    writer.write_simple_string("OK")
 }

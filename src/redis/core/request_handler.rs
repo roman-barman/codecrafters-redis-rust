@@ -1,17 +1,16 @@
 use crate::redis::core::configuration::Configuration;
 use crate::redis::core::echo::echo;
-use crate::redis::core::error::Error;
 use crate::redis::core::get_config::get_config;
 use crate::redis::core::get_keys::get_keys;
 use crate::redis::core::get_value::get_value;
 use crate::redis::core::ping::ping;
 use crate::redis::core::read_request::ReadRequest;
 use crate::redis::core::request::Request;
-use crate::redis::core::response::Response;
 use crate::redis::core::save::save;
 use crate::redis::core::set_key_value::set_key_value;
 use crate::redis::core::write_response::WriteResponse;
 use crate::redis::rdb::RedisStorage;
+use std::fmt::Display;
 use std::rc::Rc;
 
 pub struct RequestHandler {
@@ -31,43 +30,49 @@ impl RequestHandler {
         &mut self,
         stream: &mut (impl ReadRequest + WriteResponse),
     ) -> Result<(), Error> {
-        let request = stream
-            .read_request()
-            .map_err(|_| Error::Connection("cannot read request".to_string()))?;
-        if request.is_empty() {
-            return Err(Error::Connection("empty request".to_string()));
-        }
-        let request = Request::new(request);
+        let request = stream.read_request();
+        let request = match request {
+            Ok(request) => {
+                if request.is_empty() {
+                    return Err(Error {
+                        msg: "empty request".to_string(),
+                    });
+                }
+                Request::new(request)
+            }
+            Err(_) => {
+                return Err(Error {
+                    msg: "can not read request".to_string(),
+                })
+            }
+        };
         log::info!("{:?}", request);
         let binding = request.get(0).unwrap().to_lowercase();
         let command = binding.as_str();
         let result = match command {
-            "ping" => Ok(ping()),
-            "echo" => echo(&request).map_err(|e| e.into()),
-            "get" => get_value(&mut self.storage, &request).map_err(|e| e.into()),
-            "set" => set_key_value(&mut self.storage, &request).map_err(|e| e.into()),
-            "config" => get_config(&request, &self.configuration).map_err(|e| e.into()),
-            "keys" => Ok(get_keys(&mut self.storage)),
-            "save" => Ok(save(&mut self.storage, &self.configuration)),
-            _ => Err(Error::Client(format!("Unknown command '{}'", command))),
+            "ping" => ping(stream),
+            "echo" => echo(stream, &request),
+            "get" => get_value(stream, &mut self.storage, &request),
+            "set" => set_key_value(stream, &mut self.storage, &request),
+            "config" => get_config(stream, &request, &self.configuration),
+            "keys" => get_keys(stream, &mut self.storage),
+            "save" => save(stream, &mut self.storage, &self.configuration),
+            _ => stream.write_error(format!("Unknown command '{}'", command)),
         };
 
-        log::info!("{:?}", result);
-        let write_result = match result {
-            Ok(response) => match response {
-                Response::SimpleString(value) => stream.write_simple_string(value),
-                Response::BulkString(value) => stream.write_bulk_sting(&value),
-                Response::Array(value) => stream.write_array(&value),
-            },
-            Err(e) => match e {
-                Error::Client(e) => {
-                    log::info!("{}", e);
-                    stream.write_error(&e)
-                }
-                _ => Err(e)?,
-            },
-        };
+        result.map_err(|_| Error {
+            msg: "cannot write response".to_string(),
+        })
+    }
+}
 
-        write_result.map_err(|_| Error::Connection("cannot write response".to_string()))
+#[derive(thiserror::Error, Debug)]
+pub struct Error {
+    msg: String,
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.msg)
     }
 }

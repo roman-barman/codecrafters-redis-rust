@@ -1,19 +1,10 @@
 use crate::redis::core::request::Request;
-use crate::redis::core::response::Response;
-use thiserror::Error;
+use crate::redis::core::WriteResponse;
 
-pub fn echo(request: &Request) -> Result<Response, EchoError> {
+pub fn echo(writer: &mut impl WriteResponse, request: &Request) -> std::io::Result<()> {
     if request.len() != 2 {
-        Err(EchoError::WrongNumberOfArguments)
+        writer.write_error("wrong number of arguments for 'echo' command")
     } else {
-        Ok(Response::BulkString(Some(
-            request.get(1).unwrap().to_string(),
-        )))
+        writer.write_bulk_sting(&request.get(1))
     }
-}
-
-#[derive(Error, Debug)]
-pub enum EchoError {
-    #[error("wrong number of arguments")]
-    WrongNumberOfArguments,
 }

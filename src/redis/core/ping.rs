@@ -1,5 +1,5 @@
-use crate::redis::core::response::Response;
+use crate::redis::core::WriteResponse;
 
-pub fn ping() -> Response {
-    Response::SimpleString("PONG".to_string())
+pub fn ping(writer: &mut impl WriteResponse) -> std::io::Result<()> {
+    writer.write_simple_string("PONG")
 }

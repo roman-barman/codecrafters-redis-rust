@@ -1,4 +1,4 @@
-use crate::redis::core::{Configuration, Error, RequestHandler};
+use crate::redis::core::{Configuration, RequestHandler};
 use crate::redis::rdb::RedisStorage;
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
@@ -55,7 +55,7 @@ impl Server {
                             continue;
                         }
 
-                        if let Err(Error::Connection(_)) = request_handler.handle_request(stream) {
+                        if request_handler.handle_request(stream).is_err() {
                             poll.registry().deregister(stream).unwrap();
                             connections.remove(&token);
                         }
