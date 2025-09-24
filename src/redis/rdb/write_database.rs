@@ -39,14 +39,14 @@ pub fn write_database(
             match ttl {
                 Ttl::Seconds(seconds) => {
                     file.write_all(&[EXPIRE_TIME])?;
-                    file.write_all(&seconds.to_be_bytes())?;
+                    file.write_all(&seconds.to_le_bytes())?;
                     file.write_all(&[0])?;
                     write_string(&mut file, key)?;
                     write_string(&mut file, value)?;
                 }
                 Ttl::Milliseconds(milliseconds) => {
                     file.write_all(&[EXPIRE_TIME_MS])?;
-                    file.write_all(&milliseconds.to_be_bytes())?;
+                    file.write_all(&milliseconds.to_le_bytes())?;
                     file.write_all(&[0])?;
                     write_string(&mut file, key)?;
                     write_string(&mut file, value)?;

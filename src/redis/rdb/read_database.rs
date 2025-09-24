@@ -207,7 +207,7 @@ where
                 let mut expire_time = [0u8; 4];
                 file.read_exact(&mut expire_time)?;
                 copy_to_digest(digest, &expire_time);
-                let expire_time = u32::from_be_bytes(expire_time);
+                let expire_time = u32::from_le_bytes(expire_time);
                 read_value_type(file, digest)?;
                 current_db_size_expire += 1;
                 current_db_size += 1;
@@ -225,7 +225,7 @@ where
                 let mut expire_time = [0u8; 8];
                 file.read_exact(&mut expire_time)?;
                 copy_to_digest(digest, &expire_time);
-                let expire_time = u64::from_be_bytes(expire_time);
+                let expire_time = u64::from_le_bytes(expire_time);
                 read_value_type(file, digest)?;
                 current_db_size_expire += 1;
                 current_db_size += 1;
