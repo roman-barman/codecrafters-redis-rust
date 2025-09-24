@@ -3,6 +3,7 @@ use crate::redis::core::echo::echo;
 use crate::redis::core::get_config::get_config;
 use crate::redis::core::get_keys::get_keys;
 use crate::redis::core::get_value::get_value;
+use crate::redis::core::info::info;
 use crate::redis::core::ping::ping;
 use crate::redis::core::read_request::ReadRequest;
 use crate::redis::core::request::Request;
@@ -57,6 +58,7 @@ impl RequestHandler {
             "config" => get_config(stream, &request, &self.configuration),
             "keys" => get_keys(stream, &mut self.storage),
             "save" => save(stream, &mut self.storage, &self.configuration),
+            "info" => info(stream, &request),
             _ => stream.write_error(format!("Unknown command '{}'", command)),
         };
 

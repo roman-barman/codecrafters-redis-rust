@@ -3,6 +3,7 @@ mod echo;
 mod get_config;
 mod get_keys;
 mod get_value;
+mod info;
 mod ping;
 mod read_request;
 mod request;
