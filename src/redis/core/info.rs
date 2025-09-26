@@ -1,7 +1,12 @@
 use crate::redis::core::request::Request;
 use crate::redis::core::WriteResponse;
+use crate::redis::Configuration;
 
-pub fn info(writer: &mut impl WriteResponse, request: &Request) -> std::io::Result<()> {
+pub fn info(
+    writer: &mut impl WriteResponse,
+    request: &Request,
+    config: &Configuration,
+) -> std::io::Result<()> {
     if request.len() > 2 {
         return writer.write_error("wrong number of arguments for 'info' command");
     }
@@ -13,5 +18,9 @@ pub fn info(writer: &mut impl WriteResponse, request: &Request) -> std::io::Resu
         }
     }
 
-    writer.write_bulk_sting(&Some("role:master"))
+    if config.replicaof().is_some() {
+        writer.write_bulk_sting(&Some("role:slave"))
+    } else {
+        writer.write_bulk_sting(&Some("role:master"))
+    }
 }

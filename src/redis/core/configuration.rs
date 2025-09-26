@@ -4,15 +4,26 @@ pub struct Configuration {
     dir: Option<String>,
     db_file_name: Option<String>,
     port: u16,
+    replicaof: Option<String>,
 }
 
 impl Configuration {
-    pub fn new(dir: Option<String>, db_file_name: Option<String>, port: u16) -> Self {
+    pub fn new(
+        dir: Option<String>,
+        db_file_name: Option<String>,
+        port: u16,
+        replicaof: Option<String>,
+    ) -> Self {
         Self {
             dir,
             db_file_name,
             port,
+            replicaof,
         }
+    }
+
+    pub fn replicaof(&self) -> Option<&String> {
+        self.replicaof.as_ref()
     }
 
     pub fn port(&self) -> u16 {

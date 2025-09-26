@@ -58,7 +58,7 @@ impl RequestHandler {
             "config" => get_config(stream, &request, &self.configuration),
             "keys" => get_keys(stream, &mut self.storage),
             "save" => save(stream, &mut self.storage, &self.configuration),
-            "info" => info(stream, &request),
+            "info" => info(stream, &request, &self.configuration),
             _ => stream.write_error(format!("Unknown command '{}'", command)),
         };
 
