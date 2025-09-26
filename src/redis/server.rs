@@ -3,6 +3,7 @@ use crate::redis::rdb::RedisStorage;
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
+use std::io::{Read, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::rc::Rc;
 
@@ -23,6 +24,32 @@ impl Server {
         log::info!("Starting server");
         let storage = create_storage(&self.configuration);
         let mut request_handler = RequestHandler::new(storage, self.configuration.clone());
+
+        if let Some(addr) = self.configuration.replicaof() {
+            let addr = addr.split_once(' ');
+            match addr {
+                Some((address, port)) => {
+                    let port = port.parse::<u16>();
+                    if port.is_err() {
+                        log::error!("Invalid replicaof port format");
+                        return;
+                    }
+                    match handshake(address, port.unwrap()) {
+                        Ok(_) => {
+                            log::info!("replicaof handshake successful");
+                        }
+                        Err(e) => {
+                            log::error!("replicaof handshake failed: {}", e);
+                            return;
+                        }
+                    }
+                }
+                None => {
+                    log::error!("Invalid replicaof configuration format");
+                    return;
+                }
+            }
+        }
 
         let mut poll = Poll::new().unwrap();
         let addr = SocketAddr::new(
@@ -79,4 +106,16 @@ fn create_storage(configuration: &Configuration) -> RedisStorage {
         }
     }
     storage
+}
+
+fn handshake(address: &str, port: u16) -> Result<(), std::io::Error> {
+    let mut socket = std::net::TcpStream::connect((address, port))?;
+    socket.write_all(b"*1\r\n$4\r\nPING\r\n")?;
+    let mut buffer = [0u8; 1024];
+    let n = socket.read(&mut buffer)?;
+    log::info!(
+        "handshake received: {}",
+        String::from_utf8_lossy(&buffer[..n])
+    );
+    Ok(())
 }
