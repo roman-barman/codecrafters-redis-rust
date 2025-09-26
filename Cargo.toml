@@ -12,3 +12,4 @@ mio = { version = "1", features = ["os-poll", "net"] }
 simple_logger = "5"
 log = "0.4.27"
 crc-fast = "1"
+rand = "0.9.2"

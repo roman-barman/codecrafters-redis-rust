@@ -172,6 +172,7 @@ dependencies = [
  "crc-fast",
  "log",
  "mio",
+ "rand",
  "simple_logger",
  "thiserror",
 ]

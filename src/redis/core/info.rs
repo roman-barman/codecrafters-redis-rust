@@ -1,6 +1,8 @@
 use crate::redis::core::request::Request;
 use crate::redis::core::WriteResponse;
 use crate::redis::Configuration;
+use rand::distr::Alphanumeric;
+use rand::Rng;
 
 pub fn info(
     writer: &mut impl WriteResponse,
@@ -21,6 +23,18 @@ pub fn info(
     if config.replicaof().is_some() {
         writer.write_bulk_sting(&Some("role:slave"))
     } else {
-        writer.write_bulk_sting(&Some("role:master"))
+        writer.write_bulk_sting(&Some(format!(
+            "role:master\r\nmaster_replid:{}\r\nmaster_repl_offset:{}",
+            random_string(),
+            0
+        )))
     }
+}
+
+fn random_string() -> String {
+    rand::rng()
+        .sample_iter(&Alphanumeric)
+        .take(40)
+        .map(char::from)
+        .collect()
 }
