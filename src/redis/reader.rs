@@ -1,12 +1,12 @@
-use crate::redis::core::ReadRequest;
+use crate::redis::core::ReadResp;
 use mio::net::TcpStream;
 use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 use thiserror::Error;
 
-impl ReadRequest for TcpStream {
+impl ReadResp for TcpStream {
     type Error = MessageReaderError;
-    fn read_request(&self) -> Result<Vec<String>, MessageReaderError> {
+    fn read_resp(&self) -> Result<Vec<String>, MessageReaderError> {
         let reader = BufReader::with_capacity(10, self);
         read_message(reader)
     }
@@ -121,7 +121,7 @@ pub enum MessageReaderError {
 }
 #[cfg(test)]
 mod tests {
-    use crate::redis::request_reader::read_message;
+    use crate::redis::reader::read_message;
     use std::io;
     use std::string::String;
 

@@ -1,8 +1,8 @@
-use crate::redis::core::WriteResponse;
+use crate::redis::core::WriteResp;
 use mio::net::TcpStream;
 use std::io::{Error, Write};
 
-impl WriteResponse for TcpStream {
+impl WriteResp for TcpStream {
     fn write_simple_string(&mut self, message: impl AsRef<str>) -> Result<(), Error> {
         self.write_all(format!("+{}\r\n", message.as_ref()).as_bytes())
     }

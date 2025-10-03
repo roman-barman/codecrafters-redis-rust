@@ -1,8 +1,9 @@
+mod client;
 mod core;
 mod rdb;
-mod request_reader;
-mod response_writer;
+mod reader;
 mod server;
+mod writer;
 
 pub use core::Configuration;
 pub use server::Server;

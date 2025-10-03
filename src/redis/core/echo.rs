@@ -1,7 +1,7 @@
 use crate::redis::core::request::Request;
-use crate::redis::core::WriteResponse;
+use crate::redis::core::WriteResp;
 
-pub fn echo(writer: &mut impl WriteResponse, request: &Request) -> std::io::Result<()> {
+pub fn echo(writer: &mut impl WriteResp, request: &Request) -> std::io::Result<()> {
     if request.len() != 2 {
         writer.write_error("wrong number of arguments for 'echo' command")
     } else {

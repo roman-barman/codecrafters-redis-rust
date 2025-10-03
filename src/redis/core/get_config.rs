@@ -1,12 +1,12 @@
 use crate::redis::core::configuration::Configuration;
 use crate::redis::core::request::Request;
-use crate::redis::core::WriteResponse;
+use crate::redis::core::WriteResp;
 
 const DIR: &str = "dir";
 const DB_FILE_NAME: &str = "dbfilename";
 
 pub fn get_config(
-    writer: &mut impl WriteResponse,
+    writer: &mut impl WriteResp,
     request: &Request,
     config: &Configuration,
 ) -> std::io::Result<()> {

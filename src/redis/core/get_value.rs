@@ -1,9 +1,9 @@
 use crate::redis::core::request::Request;
-use crate::redis::core::WriteResponse;
+use crate::redis::core::WriteResp;
 use crate::redis::rdb::RedisStorage;
 
 pub fn get_value(
-    writer: &mut impl WriteResponse,
+    writer: &mut impl WriteResp,
     storage: &mut RedisStorage,
     request: &Request,
 ) -> std::io::Result<()> {

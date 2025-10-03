@@ -5,11 +5,12 @@ use crate::redis::core::get_keys::get_keys;
 use crate::redis::core::get_value::get_value;
 use crate::redis::core::info::info;
 use crate::redis::core::ping::ping;
-use crate::redis::core::read_request::ReadRequest;
+use crate::redis::core::read_resp::ReadResp;
+use crate::redis::core::replconf::replconf;
 use crate::redis::core::request::Request;
 use crate::redis::core::save::save;
 use crate::redis::core::set_key_value::set_key_value;
-use crate::redis::core::write_response::WriteResponse;
+use crate::redis::core::write_resp::WriteResp;
 use crate::redis::rdb::RedisStorage;
 use std::fmt::Display;
 use std::rc::Rc;
@@ -29,9 +30,9 @@ impl RequestHandler {
 
     pub fn handle_request(
         &mut self,
-        stream: &mut (impl ReadRequest + WriteResponse),
+        stream: &mut (impl ReadResp + WriteResp),
     ) -> Result<(), Error> {
-        let request = stream.read_request();
+        let request = stream.read_resp();
         let request = match request {
             Ok(request) => {
                 if request.is_empty() {
@@ -59,6 +60,7 @@ impl RequestHandler {
             "keys" => get_keys(stream, &mut self.storage),
             "save" => save(stream, &mut self.storage, &self.configuration),
             "info" => info(stream, &request, &self.configuration),
+            "replconf" => replconf(stream, &request),
             _ => stream.write_error(format!("Unknown command '{}'", command)),
         };
 

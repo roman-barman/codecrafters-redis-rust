@@ -1,11 +1,12 @@
+use crate::redis::client::TcpClient;
 use crate::redis::core::{Configuration, RequestHandler};
 use crate::redis::rdb::RedisStorage;
 use mio::net::TcpListener;
 use mio::{Events, Interest, Poll, Token};
 use std::collections::HashMap;
-use std::io::{Read, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::rc::Rc;
+use std::str::FromStr;
 
 const LISTENER_TOKEN: Token = Token(0);
 
@@ -22,32 +23,12 @@ impl Server {
 
     pub fn run(&mut self) {
         log::info!("Starting server");
-        let storage = create_storage(&self.configuration);
+        let storage = self.create_storage();
         let mut request_handler = RequestHandler::new(storage, self.configuration.clone());
 
         if let Some(addr) = self.configuration.replicaof() {
-            let addr = addr.split_once(' ');
-            match addr {
-                Some((address, port)) => {
-                    let port = port.parse::<u16>();
-                    if port.is_err() {
-                        log::error!("Invalid replicaof port format");
-                        return;
-                    }
-                    match handshake(address, port.unwrap()) {
-                        Ok(_) => {
-                            log::info!("replicaof handshake successful");
-                        }
-                        Err(e) => {
-                            log::error!("replicaof handshake failed: {}", e);
-                            return;
-                        }
-                    }
-                }
-                None => {
-                    log::error!("Invalid replicaof configuration format");
-                    return;
-                }
+            if !self.replicaof_handshake(addr) {
+                return;
             }
         }
 
@@ -95,27 +76,106 @@ impl Server {
             }
         }
     }
-}
 
-fn create_storage(configuration: &Configuration) -> RedisStorage {
-    let mut storage = RedisStorage::default();
-    if let Some(path) = configuration.get_db_file_path() {
-        let result = storage.restore_database(&path);
-        if let Err(e) = result {
-            log::error!("error restoring storage: {}", e);
+    fn replicaof_handshake(&self, addr: &str) -> bool {
+        let addr = addr.split_once(' ');
+        match addr {
+            Some((address, port)) => {
+                let address = if address == "localhost" {
+                    "127.0.0.1"
+                } else {
+                    address
+                };
+                let port = port.parse::<u16>();
+                if port.is_err() {
+                    log::error!("Invalid replicaof port format");
+                    return false;
+                }
+                match handshake(address, port.unwrap(), self.configuration.port()) {
+                    Ok(_) => {
+                        log::info!("replicaof handshake successful");
+                        true
+                    }
+                    Err(e) => {
+                        log::error!("replicaof handshake failed: {}", e);
+                        false
+                    }
+                }
+            }
+            None => {
+                log::error!("Invalid replicaof configuration format");
+                false
+            }
         }
     }
-    storage
+
+    fn create_storage(&self) -> RedisStorage {
+        let mut storage = RedisStorage::default();
+        if let Some(path) = self.configuration.get_db_file_path() {
+            let result = storage.restore_database(&path);
+            if let Err(e) = result {
+                log::error!("error restoring storage: {}", e);
+            }
+        }
+        storage
+    }
 }
 
-fn handshake(address: &str, port: u16) -> Result<(), std::io::Error> {
-    let mut socket = std::net::TcpStream::connect((address, port))?;
-    socket.write_all(b"*1\r\n$4\r\nPING\r\n")?;
-    let mut buffer = [0u8; 1024];
-    let n = socket.read(&mut buffer)?;
-    log::info!(
-        "handshake received: {}",
-        String::from_utf8_lossy(&buffer[..n])
+fn handshake(address: &str, master_port: u16, slave_port: u16) -> std::io::Result<()> {
+    log::debug!(
+        "handshake: connecting to master at {}:{}",
+        address,
+        master_port
     );
+    let addr = SocketAddr::from_str(format!("{}:{}", address, master_port).as_str()).unwrap();
+    let mut client = TcpClient::connect(addr)?;
+
+    log::info!("handshake send: PING");
+    client.send(&[Some("PING")])?;
+    match client.receive() {
+        Ok(response) => {
+            if response.len() != 1 || response.first().unwrap().as_str() != "PONG" {
+                log::error!("handshake failed: invalid response");
+                return Err(std::io::Error::other("handshake failed"));
+            }
+
+            log::info!("handshake received: PONG");
+        }
+        Err(e) => {
+            log::error!("handshake failed: {}", e);
+            return Err(std::io::Error::other("handshake failed"));
+        }
+    }
+
+    log::info!("handshake send: REPLCONF listening-port {}", slave_port);
+    client.send(&[
+        Some("REPLCONF"),
+        Some("listening-port"),
+        Some(slave_port.to_string().as_str()),
+    ])?;
+    receive_replconf_ack(&mut client)?;
+
+    log::info!("handshake send: REPLCONF capa psync2",);
+    client.send(&[Some("REPLCONF"), Some("capa"), Some("psync2")])?;
+    receive_replconf_ack(&mut client)?;
+
     Ok(())
+}
+
+fn receive_replconf_ack(client: &mut TcpClient) -> std::io::Result<()> {
+    match client.receive() {
+        Ok(response) => {
+            if response.len() != 1 || response.first().unwrap().as_str() != "OK" {
+                log::error!("handshake failed: invalid response");
+                return Err(std::io::Error::other("handshake failed"));
+            }
+
+            log::info!("handshake received: OK");
+            Ok(())
+        }
+        Err(e) => {
+            log::error!("handshake failed: {}", e);
+            Err(std::io::Error::other("handshake failed"))
+        }
+    }
 }

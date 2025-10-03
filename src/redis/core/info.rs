@@ -1,11 +1,11 @@
 use crate::redis::core::request::Request;
-use crate::redis::core::WriteResponse;
+use crate::redis::core::WriteResp;
 use crate::redis::Configuration;
 use rand::distr::Alphanumeric;
 use rand::Rng;
 
 pub fn info(
-    writer: &mut impl WriteResponse,
+    writer: &mut impl WriteResp,
     request: &Request,
     config: &Configuration,
 ) -> std::io::Result<()> {
