@@ -159,6 +159,10 @@ fn handshake(address: &str, master_port: u16, slave_port: u16) -> std::io::Resul
     client.send(&[Some("REPLCONF"), Some("capa"), Some("psync2")])?;
     receive_replconf_ack(&mut client)?;
 
+    log::info!("handshake send: PSYNC ? -1",);
+    client.send(&[Some("PSYNC"), Some("?"), Some("-1")])?;
+    let _ = client.receive();
+
     Ok(())
 }
 
