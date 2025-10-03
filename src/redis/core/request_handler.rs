@@ -5,6 +5,7 @@ use crate::redis::core::get_keys::get_keys;
 use crate::redis::core::get_value::get_value;
 use crate::redis::core::info::info;
 use crate::redis::core::ping::ping;
+use crate::redis::core::psync::psync;
 use crate::redis::core::read_resp::ReadResp;
 use crate::redis::core::replconf::replconf;
 use crate::redis::core::request::Request;
@@ -61,6 +62,7 @@ impl RequestHandler {
             "save" => save(stream, &mut self.storage, &self.configuration),
             "info" => info(stream, &request, &self.configuration),
             "replconf" => replconf(stream, &request),
+            "psync" => psync(stream, &request),
             _ => stream.write_error(format!("Unknown command '{}'", command)),
         };
 

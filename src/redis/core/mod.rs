@@ -5,6 +5,7 @@ mod get_keys;
 mod get_value;
 mod info;
 mod ping;
+mod psync;
 mod read_resp;
 mod replconf;
 mod request;
